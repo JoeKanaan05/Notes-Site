@@ -1,3 +1,103 @@
-@use "./variables.scss" as *;
+@use "./base.scss";
 
-// put your custom CSS here!
+// ─────────────────────────────────────────────
+// Warm, Claude-inspired theme for Quartz
+// Cream paper background, near-black ink, clay-orange accent.
+// `html:root` is slightly more specific than Quartz's own `:root`,
+// so these values win no matter which stylesheet loads first.
+// ─────────────────────────────────────────────
+
+html:root {
+  --light: #faf9f5;          // page background
+  --lightgray: #e8e6dc;      // borders, dividers, search box
+  --gray: #87867f;           // muted text, dates, graph lines
+  --darkgray: #3d3d3a;       // body text
+  --dark: #141413;           // headings
+  --secondary: #c96442;      // links, site title
+  --tertiary: #d97757;       // hover / visited
+  --highlight: rgba(201, 100, 66, 0.1);     // internal-link background
+  --textHighlight: rgba(217, 119, 87, 0.25); // ==highlighted== text
+
+  --code-bg: #f0eee6;
+}
+
+html:root[saved-theme="dark"] {
+  --light: #262624;
+  --lightgray: #3e3e38;
+  --gray: #9a9893;
+  --darkgray: #e8e6dc;
+  --dark: #faf9f5;
+  --secondary: #d97757;
+  --tertiary: #e8a088;
+  --highlight: rgba(217, 119, 87, 0.14);
+  --textHighlight: rgba(217, 119, 87, 0.3);
+
+  --code-bg: #1f1e1d;
+}
+
+// ── Reading comfort ──
+article {
+  line-height: 1.7;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--textHighlight);
+}
+
+// ── Links: no underline, soft clay pill for internal links ──
+a {
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a.internal {
+  border-radius: 6px;
+  padding: 0 0.2em;
+}
+
+// ── Code ──
+pre,
+code {
+  border-radius: 10px;
+}
+
+pre {
+  background-color: var(--code-bg) !important;
+  border: 1px solid var(--lightgray);
+}
+
+// ── Blockquotes and callouts ──
+blockquote {
+  border-left: 3px solid var(--secondary);
+  margin-left: 0;
+  padding-left: 1rem;
+  color: var(--gray);
+}
+
+.callout {
+  border-radius: 10px;
+}
+
+// ── Tables ──
+table {
+  border-collapse: collapse;
+}
+
+th {
+  background-color: var(--code-bg);
+}
+
+th,
+td {
+  border: 1px solid var(--lightgray);
+  padding: 0.4rem 0.8rem;
+}
+
+// ── Search box ──
+.search > .search-button {
+  border-radius: 10px;
+}
