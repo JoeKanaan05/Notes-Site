@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
 configuration:
-  pageTitle: Quartz 5
+  pageTitle: Notes
   pageTitleSuffix: ""
   enableSPA: true
   enablePopovers: true
@@ -78,7 +78,7 @@ plugins:
     enabled: true
     order: 40
   - source: "@quartz-community/table-of-contents"
-    enabled: true
+    enabled: false
     order: 50
     layout:
       position: right
@@ -113,8 +113,8 @@ plugins:
   - source: "@quartz-themes/core"
     enabled: true
     options:
-      theme: default
-      mode: both
+      theme: "claude-code-orange"
+      mode: "both"
   - source: "@quartz-community/remove-draft"
     enabled: true
   - source: "@quartz-community/explicit-publish"
@@ -176,9 +176,9 @@ plugins:
       groupOptions:
         grow: true
   - source: "@quartz-community/backlinks"
-    enabled: true
+    enabled: false
     layout:
-      position: right
+      position: left
       priority: 50
   - source: "@quartz-community/article-title"
     enabled: true
@@ -227,7 +227,7 @@ plugins:
       position: afterBody
       priority: 10
   - source: "@quartz-community/footer"
-    enabled: true
+    enabled: false
     options:
       links:
         GitHub: https://github.com/jackyzha0/quartz
