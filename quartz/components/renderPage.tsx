@@ -71,8 +71,36 @@ export function pageResources(
     }
   })
 
+  // Pages only fetch the slim index (no note text), wrapped as `{ content }`, which the
+  // explorer, search and encrypted-pages scripts all unwrap. Search indexes the bare
+  // wrapper as a single empty entry, so the full-text entries are added through its
+  // `content-index-updated` hook once search is first opened. Note: the graph plugin
+  // does not unwrap `content`, so it needs the eager full index if re-enabled.
   const contentIndexPath = joinSegments(baseDir, "static/contentIndex.json")
-  const contentIndexScript = `const fetchData = fetch("${contentIndexPath}").then(data => data.json())`
+  const slimContentIndexPath = joinSegments(baseDir, "static/contentIndex.slim.json")
+  const contentIndexScript = `
+const fetchData = fetch("${slimContentIndexPath}").then(data => data.json()).then(content => ({ content }))
+;(() => {
+  let fullIndexRequested = false
+  const loadFullIndex = () => {
+    if (fullIndexRequested) return
+    fullIndexRequested = true
+    Promise.all([fetchData, fetch("${contentIndexPath}").then(data => data.json())])
+      .then(([index, full]) => {
+        index.content = { ...index.content, ...full }
+        document.dispatchEvent(new CustomEvent("content-index-updated", { detail: { slugs: Object.keys(full) } }))
+        // re-run anything typed while the full index was downloading
+        for (const bar of document.querySelectorAll(".search-bar")) {
+          if (bar.value) bar.dispatchEvent(new Event("input", { bubbles: true }))
+        }
+      })
+      .catch(() => { fullIndexRequested = false })
+  }
+  const inSearch = e => e.target instanceof Element && e.target.closest(".search")
+  document.addEventListener("pointerdown", e => inSearch(e) && loadFullIndex(), true)
+  document.addEventListener("focusin", e => inSearch(e) && loadFullIndex(), true)
+  document.addEventListener("keydown", e => (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && loadFullIndex(), true)
+})()`
 
   const resources: StaticResources = {
     css: [
