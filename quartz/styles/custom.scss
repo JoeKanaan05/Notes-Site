@@ -160,6 +160,110 @@ a.tag-link {
   background: none !important;
 }
 
+// ═════════════ 4. Tables ═════════════
+// One rounded box that hugs the table, a tinted header row and faint row lines.
+// The theme's per-cell borders and base.scss's extra margin/padding are dropped.
+// Wide tables scroll sideways inside the box instead of widening the page.
+.table-container {
+  width: fit-content;
+  max-width: 100%;
+  margin: 1.25rem 0;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  overflow-x: auto;
+
+  & > table {
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    border-collapse: collapse;
+    background-color: transparent;
+    font-size: 0.95rem;
+
+    & > * {
+      line-height: 1.5;
+    }
+
+    tr {
+      border: none;
+      background-color: transparent;
+    }
+
+    th,
+    td {
+      padding: 0.5rem 0.9rem;
+      border: none;
+      border-bottom: 1px solid var(--cc-border);
+      vertical-align: top;
+    }
+
+    th {
+      background-color: var(--cc-table-header);
+      color: var(--cc-heading);
+      font-weight: 600;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: var(--cc-table-bg);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+// ═════════════ 5. Code ═════════════
+// Blocks: a single box. The theme also borders and pads the inner <code> and
+// every line, which drew a box inside a box with a big gap on top.
+figure[data-rehype-pretty-code-figure] {
+  margin: 1.25rem 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+pre:has(> code:not(.mermaid)) {
+  margin: 1.25rem 0;
+  padding: 0;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  background-color: var(--cc-code-bg);
+
+  figure > & {
+    margin: 0;
+  }
+
+  & > code {
+    padding: 0.75rem 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    font-size: 0.875rem;
+    line-height: 1.6;
+
+    & > [data-line] {
+      padding: 0 1rem 0 0.75rem;
+      border-left: 3px solid transparent;
+      background: none;
+
+      &[data-highlighted-line] {
+        background-color: var(--highlight);
+        border-left-color: var(--secondary);
+      }
+    }
+  }
+}
+
+// Inline code: a soft chip, no border.
+:not(pre) > code {
+  padding: 0.1em 0.35em;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.88em;
+}
+
 // ── Mobile: undo desktop-only spacing ──
 @media (max-width: 800px) {
   .center,
@@ -167,5 +271,13 @@ a.tag-link {
   footer {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  pre:has(> code:not(.mermaid)) > code {
+    font-size: 0.8rem;
+  }
+
+  .table-container > table {
+    font-size: 0.88rem;
   }
 }
