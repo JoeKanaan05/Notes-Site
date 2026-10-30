@@ -215,13 +215,33 @@ a.tag-link {
 }
 
 // ═════════════ 5. Code ═════════════
-// Blocks: a single box. The theme also borders and pads the inner <code> and
-// every line, which drew a box inside a box with a big gap on top.
+// Blocks: a single box styled like the tables — same border, radius and warm
+// fill instead of the theme's blue, and a title bar that looks like a header row.
+// The theme also borders and pads the inner <code> and every line, which drew
+// a box inside a box with a big gap on top.
 figure[data-rehype-pretty-code-figure] {
   margin: 1.25rem 0;
   border: none;
   border-radius: 0;
   background: none;
+
+  & > [data-rehype-pretty-code-title] {
+    width: auto;
+    margin: 0;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--cc-border);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    background-color: var(--cc-table-header);
+    color: var(--cc-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    & + pre {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
 }
 
 pre:has(> code:not(.mermaid)) {
@@ -229,7 +249,7 @@ pre:has(> code:not(.mermaid)) {
   padding: 0;
   border: 1px solid var(--cc-border);
   border-radius: 10px;
-  background-color: var(--cc-code-bg);
+  background-color: var(--cc-table-bg);
 
   figure > & {
     margin: 0;
