@@ -83,6 +83,9 @@ plugins:
     layout:
       position: right
       priority: 30
+  - source: ./plugins/svg-embeds
+    enabled: true
+    order: 55
   - source: "@quartz-community/crawl-links"
     enabled: true
     options:

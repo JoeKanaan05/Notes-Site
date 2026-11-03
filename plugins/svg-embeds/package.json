@@ -1,0 +1,24 @@
+{
+  "name": "svg-embeds",
+  "version": "1.0.0",
+  "description": "Turns Obsidian SVG embeds into <img> tags so crawl-links resolves their paths",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    }
+  },
+  "main": "./index.js",
+  "quartz": {
+    "name": "svg-embeds",
+    "displayName": "SVG Embeds",
+    "category": "transformer",
+    "version": "1.0.0",
+    "quartzVersion": ">=5.0.0",
+    "dependencies": [],
+    "defaultOrder": 55,
+    "defaultEnabled": true,
+    "defaultOptions": {}
+  }
+}
