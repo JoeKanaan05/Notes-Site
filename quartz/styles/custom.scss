@@ -284,6 +284,84 @@ pre:has(> code:not(.mermaid)) {
   font-size: 0.88em;
 }
 
+// ═════════════ 6. Mermaid ═════════════
+// The mermaid script passes these to Mermaid as diagram colours, but the theme
+// defines them as color-mix(), which Mermaid can't parse, so every diagram
+// failed and stayed as text. Plain values equal to the theme defaults (bg/text
+// depth 0%) keep the rest of the page unchanged.
+:root[saved-theme="dark"] {
+  --light: #262624;
+  --darkgray: #eae8e1;
+  --highlight: rgba(217, 119, 87, 0.28);
+}
+
+:root[saved-theme="light"] {
+  --light: #f9f3e7;
+  --darkgray: #34322c;
+  --highlight: rgba(193, 95, 60, 0.22);
+}
+
+// Same box as tables and code blocks (the theme gives it the blue code look).
+// Wide diagrams scroll sideways inside the box.
+pre:has(> code.mermaid) {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  background-color: var(--cc-table-bg);
+  overflow-x: auto;
+
+  & > code.mermaid {
+    display: block;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: center;
+  }
+
+  // Diagram in the table palette: nodes tinted like header cells, muted lines.
+  // Mermaid scopes its own styles to the svg's id, hence !important.
+  svg {
+    .node rect,
+    .node polygon,
+    .node circle,
+    .node ellipse,
+    .node path {
+      fill: var(--cc-table-header) !important;
+      stroke: var(--gray) !important;
+      stroke-width: 1px !important;
+    }
+
+    .nodeLabel,
+    .label,
+    .edgeLabel {
+      color: var(--cc-heading) !important;
+      fill: var(--cc-heading) !important;
+    }
+
+    .flowchart-link,
+    .edgePath .path {
+      stroke: var(--gray) !important;
+    }
+
+    marker path,
+    .arrowheadPath {
+      fill: var(--gray) !important;
+      stroke: var(--gray) !important;
+    }
+
+    .edgeLabel,
+    .edgeLabel p,
+    .labelBkg {
+      background-color: var(--cc-table-bg) !important;
+    }
+
+    .edgeLabel rect {
+      fill: var(--cc-table-bg) !important;
+    }
+  }
+}
+
 // ── Mobile: undo desktop-only spacing ──
 @media (max-width: 800px) {
   .center,

@@ -5,6 +5,15 @@ import { googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { unescapeHTML } from "../util/escape"
 
+// The obsidian-flavored-markdown plugin hardcodes Mermaid 11.4.0, which draws an
+// arrowhead on plain `---` links. Redirect its dynamic import to a fixed release.
+const mermaidImportMap = JSON.stringify({
+  imports: {
+    "https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.esm.min.mjs":
+      "https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.17.2/mermaid.esm.min.mjs",
+  },
+})
+
 export default (() => {
   const Head: QuartzComponent = ({
     cfg,
@@ -43,6 +52,7 @@ export default (() => {
       <head>
         <title>{title}</title>
         <meta charSet="utf-8" />
+        <script type="importmap" dangerouslySetInnerHTML={{ __html: mermaidImportMap }} />
         {coreStylesheet && <link rel="preload" href={coreStylesheet} as="style" />}
         {coreScript && coreScript.contentType === "external" && (
           <link rel="preload" href={coreScript.src} as="script" />
