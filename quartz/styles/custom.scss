@@ -1,16 +1,234 @@
 @use "./base.scss";
+@use "./variables.scss" as *;
 
-// ═════════════════════════════════════════════
-// Tweaks on top of the claude-code-orange theme
-// ═════════════════════════════════════════════
+// Frosted-glass blur. Both spellings are needed (Safari < 18 only reads the
+// prefixed one), and the CSS minifier collapses the pair into one if they are
+// written as literals, so the value goes through a custom property.
+@mixin glass-blur($value) {
+  --ui-backdrop: #{$value};
+  -webkit-backdrop-filter: var(--ui-backdrop);
+  backdrop-filter: var(--ui-backdrop);
+}
 
-// ── No graph, no right sidebar ──
+// ═════════════════════════════════════════════════════════════════════════
+// Monochrome glass theme
+// White / gray / black palette, frosted-glass surfaces, soft glossy cards and
+// spring-like motion. Base palette (--light, --dark, …) lives in
+// quartz.config.yaml; the tokens below add the surfaces, shadows and sheens.
+// ═════════════════════════════════════════════════════════════════════════
+
+// ═════════════ 0. Tokens ═════════════
+html:root {
+  // Type: SF Pro on Apple devices, Inter (loaded from Google Fonts) elsewhere.
+  --bodyFont:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", system-ui,
+    sans-serif;
+  --headerFont:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", system-ui,
+    sans-serif;
+  --codeFont: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  // Motion: Apple-style ease-out and a gentle spring with a hint of overshoot.
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --dur-fast: 160ms;
+  --dur: 280ms;
+  --dur-slow: 480ms;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  // Light surfaces
+  --ui-page: #fbfbfd;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f5f5f7;
+  --ui-hover: rgba(0, 0, 0, 0.045);
+  --ui-active: rgba(0, 0, 0, 0.075);
+  --ui-border: rgba(0, 0, 0, 0.08);
+  --ui-border-strong: rgba(0, 0, 0, 0.16);
+  --ui-text: #1d1d1f;
+  --ui-heading: #000000;
+  --ui-muted: #6e6e73;
+  --ui-faint: #a1a1a6;
+  --ui-glass: rgba(246, 246, 248, 0.72);
+  --ui-glass-strong: rgba(255, 255, 255, 0.82);
+  --ui-drawer-tint: rgba(250, 250, 252, 0.5);
+  --ui-scrim: rgba(250, 250, 252, 0.45);
+  --ui-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 100%);
+  --ui-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --ui-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.06);
+  --ui-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.05), 0 24px 60px rgba(0, 0, 0, 0.16);
+  --ui-callout-rgb: 110, 110, 115;
+  color-scheme: light;
+}
+
+html:root[saved-theme="dark"] {
+  --ui-page: #0b0b0c;
+  --ui-surface: #1c1c1e;
+  --ui-surface-2: #161618;
+  --ui-hover: rgba(255, 255, 255, 0.06);
+  --ui-active: rgba(255, 255, 255, 0.1);
+  --ui-border: rgba(255, 255, 255, 0.09);
+  --ui-border-strong: rgba(255, 255, 255, 0.18);
+  --ui-text: #e5e5ea;
+  --ui-heading: #ffffff;
+  --ui-muted: #a1a1a6;
+  --ui-faint: #6e6e73;
+  --ui-glass: rgba(22, 22, 24, 0.68);
+  --ui-glass-strong: rgba(30, 30, 32, 0.8);
+  --ui-drawer-tint: rgba(14, 14, 16, 0.76);
+  --ui-scrim: rgba(0, 0, 0, 0.45);
+  --ui-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 100%);
+  --ui-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ui-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --ui-shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.4), 0 28px 70px rgba(0, 0, 0, 0.6);
+  --ui-callout-rgb: 161, 161, 166;
+  color-scheme: dark;
+}
+
+// ═════════════ 1. Page, type, smooth theme switching ═════════════
+body {
+  background-color: var(--ui-page);
+  color: var(--ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+}
+
+// Cross-fade colours when toggling light/dark instead of snapping.
+body,
+.sidebar.left,
+.search-button,
+.table-container,
+pre,
+.callout,
+blockquote,
+.popover-inner,
+.darkmode,
+.readermode {
+  transition:
+    background-color var(--dur-slow) var(--ease),
+    border-color var(--dur-slow) var(--ease),
+    color var(--dur-slow) var(--ease),
+    box-shadow var(--dur-slow) var(--ease);
+}
+
+::selection {
+  background: var(--ui-active);
+  color: var(--ui-heading);
+}
+
+article {
+  color: var(--ui-text);
+  font-size: 1.02rem;
+  letter-spacing: -0.003em;
+
+  p,
+  li {
+    line-height: 1.7;
+  }
+
+  p > strong,
+  strong {
+    color: var(--ui-heading);
+    font-weight: 650;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--headerFont);
+  color: var(--ui-heading);
+  font-weight: 650;
+  letter-spacing: -0.022em;
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.page article > h1,
+h1.article-title {
+  font-size: 2.4rem;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+h2 {
+  font-size: 1.55rem;
+  margin-top: 2.2rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+hr {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ui-border-strong), transparent);
+}
+
+// ═════════════ 2. Links ═════════════
+a {
+  font-weight: 500;
+  color: var(--ui-heading);
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    text-decoration-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    color: var(--ui-heading);
+  }
+
+  &.internal,
+  &.external {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 3px;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: var(--ui-border-strong);
+
+    &:hover {
+      text-decoration-color: currentColor;
+      background-color: var(--ui-hover);
+    }
+
+    &.broken {
+      color: var(--ui-muted);
+      text-decoration-style: dashed;
+    }
+
+    &:has(> img) {
+      text-decoration: none;
+      background: none;
+    }
+  }
+
+  &.external .external-icon > path {
+    fill: var(--ui-muted);
+  }
+}
+
+// ═════════════ 3. Layout ═════════════
+// No graph, no right sidebar
 .graph,
 .sidebar.right {
   display: none !important;
 }
 
-// ═════════════ 1. Wider text area ═════════════
 // Give the right sidebar's empty column to the note.
 @media all and (min-width: 1200px) {
   #quartz-body {
@@ -25,29 +243,283 @@
 .center,
 .page-header,
 footer {
-  max-width: 980px;     // raise for even wider text, lower for shorter lines
+  max-width: 980px; // raise for even wider text, lower for shorter lines
   padding-left: 2.5rem;
   padding-right: 2.5rem;
 }
 
-// ═════════════ 2. Left sidebar spacing ═════════════
+// Page entrance: replayed on every SPA navigation by the script in Head.tsx.
+@keyframes ui-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.page-enter {
+  // `backwards`, not `both`: a held `transform: none` would override the
+  // explorer's mobile slide-out and other transforms after the animation ends.
+  animation: ui-page-enter var(--dur-slow) var(--ease-out) backwards;
+}
+
+.page-header.page-enter {
+  animation-duration: 380ms;
+}
+
+// Thin black/white progress bar with a soft glow while a page loads.
+.navigation-progress {
+  height: 2px;
+  background: var(--ui-heading);
+  box-shadow: 0 0 10px var(--ui-border-strong);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.6s var(--ease-out);
+}
+
+// ═════════════ 4. Left sidebar (frosted glass) ═════════════
 .sidebar.left {
-  padding-top: 2.25rem;   // was a big empty gap above the title
-  gap: 1.25rem;           // even spacing between title / search / explorer
+  padding-top: 2.25rem;
+  gap: 1.25rem;
+}
+
+@media all and (min-width: 801px) {
+  .page > #quartz-body .sidebar.left {
+    background: var(--ui-sheen), var(--ui-glass);
+    background-size:
+      100% 140px,
+      auto;
+    background-repeat: no-repeat;
+    @include glass-blur(saturate(180%) blur(24px));
+    border-right: 1px solid var(--ui-border);
+    box-shadow: var(--ui-highlight);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
 }
 
 .page-title {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   margin: 0;
   line-height: 1.2;
+
+  a {
+    color: var(--ui-heading);
+    text-decoration: none;
+    background: none;
+  }
 }
 
-// Search + theme toggles on one tidy row
+// Breadcrumbs: small and quiet
+.breadcrumb-container {
+  font-size: 0.85rem;
+
+  .breadcrumb-element a {
+    color: var(--ui-muted);
+    font-weight: 500;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--ui-heading);
+      background: none;
+    }
+  }
+
+  .breadcrumb-element p {
+    color: var(--ui-faint);
+  }
+}
+
+// ═════════════ 5. Toolbar: search pill + round icon buttons ═════════════
 .search {
   margin: 0;
 }
 
-// "Explorer" header: small, muted label instead of a big heading
+.search-button {
+  height: 2.25rem;
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  background: var(--ui-sheen), var(--ui-surface);
+  box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
+  color: var(--ui-muted);
+  transition:
+    transform var(--dur) var(--spring),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+
+  & > p {
+    color: var(--ui-faint);
+    font-weight: 450;
+  }
+
+  svg {
+    stroke: var(--ui-muted);
+  }
+
+  &:hover {
+    border-color: var(--ui-border-strong);
+    box-shadow: var(--ui-shadow), var(--ui-highlight);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.darkmode,
+.readermode {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-sheen), var(--ui-surface);
+  box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
+  transition:
+    transform var(--dur) var(--spring),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+
+  svg {
+    width: 17px;
+    height: 17px;
+    top: calc(50% - 8.5px);
+    left: calc(50% - 8.5px);
+    fill: var(--ui-muted);
+    stroke: var(--ui-muted);
+    transition:
+      opacity var(--dur) var(--ease),
+      transform var(--dur-slow) var(--spring);
+  }
+
+  &:hover {
+    border-color: var(--ui-border-strong);
+    box-shadow: var(--ui-shadow), var(--ui-highlight);
+
+    svg {
+      fill: var(--ui-heading);
+      stroke: var(--ui-heading);
+    }
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+// Sun/moon icon spins in when the theme flips.
+@keyframes ui-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.darkmode svg {
+  animation: ui-icon-in var(--dur-slow) var(--spring);
+}
+
+// ═════════════ 6. Search overlay (glass sheet) ═════════════
+@keyframes ui-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.search-container {
+  background: var(--ui-scrim);
+  @include glass-blur(blur(12px) saturate(140%));
+
+  &.active {
+    animation: ui-fade-in var(--dur) var(--ease) both;
+
+    .search-space {
+      animation: ui-sheet-in var(--dur-slow) var(--ease-out) both;
+    }
+  }
+
+  .search-space {
+    max-width: 760px;
+
+    & > *:not(.ghost-text):not(.tag-suggestions) {
+      border: 1px solid var(--ui-border);
+      border-radius: var(--radius-lg);
+      background: var(--ui-sheen), var(--ui-glass-strong);
+      background-size:
+        100% 80px,
+        auto;
+      background-repeat: no-repeat;
+      @include glass-blur(blur(30px) saturate(180%));
+      box-shadow: var(--ui-shadow-lg), var(--ui-highlight);
+      overflow: hidden;
+    }
+  }
+
+  .search-bar {
+    font-family: var(--bodyFont);
+    font-size: 1.15rem;
+    padding: 0.9rem 1.2rem;
+    border: none;
+    background: transparent;
+    color: var(--ui-heading);
+
+    &::placeholder {
+      color: var(--ui-faint);
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .results-container .result-card {
+    border-bottom: 1px solid var(--ui-border);
+    color: var(--ui-text);
+    transition: background-color var(--dur-fast) var(--ease);
+
+    & > h3 {
+      color: var(--ui-heading);
+      letter-spacing: -0.01em;
+    }
+
+    &:hover,
+    &:focus,
+    &.focus {
+      background: var(--ui-hover);
+    }
+  }
+
+  .highlight {
+    background: var(--ui-active);
+    color: var(--ui-heading);
+    border-radius: 3px;
+  }
+}
+
+// ═════════════ 7. Explorer ═════════════
 .explorer {
   .title-button,
   .explorer-toggle {
@@ -56,11 +528,11 @@ footer {
 
   .title-button h2,
   h2 {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--gray);
+    color: var(--ui-faint);
     margin: 0;
   }
 
@@ -70,7 +542,6 @@ footer {
     padding: 0;
   }
 
-  // Same vertical rhythm for every row
   li {
     margin: 0;
   }
@@ -80,61 +551,108 @@ footer {
   .folder-outer > ul {
     margin-left: 0.6rem;
     padding-left: 0.6rem;
-    border-left: 1px solid var(--lightgray);
+    border-left: 1px solid var(--ui-border);
   }
 
-  // Folder rows: bold, light text (not orange)
+  // Folder expand/collapse: smooth height via grid rows.
+  .folder-outer {
+    transition: grid-template-rows var(--dur) var(--ease-out);
+  }
+
   .folder-container {
-    padding: 0.2rem 0.35rem;
-    border-radius: 6px;
+    padding: 0.22rem 0.4rem;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--dur-fast) var(--ease);
 
     .folder-title,
     .folder-button span,
     div > a {
-      color: var(--dark);
+      color: var(--ui-heading);
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.93rem;
+      text-decoration: none;
+      background: none;
     }
 
     .folder-icon {
-      color: var(--gray);
-      opacity: 0.8;
+      color: var(--ui-faint);
+      transition:
+        transform var(--dur) var(--spring),
+        color var(--dur-fast) var(--ease);
     }
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.04);
+      background-color: var(--ui-hover);
+
+      .folder-icon {
+        color: var(--ui-muted);
+      }
     }
   }
 
-  // Note rows: regular weight, softer text (not orange)
+  // Note rows
   li > a {
     display: block;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.92rem;
+    padding: 0.24rem 0.55rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.91rem;
     font-weight: 400;
-    color: var(--darkgray);
+    color: var(--ui-muted);
     opacity: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease),
+      transform var(--dur) var(--spring);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.04);
-      color: var(--dark);
+      background-color: var(--ui-hover);
+      color: var(--ui-heading);
+      transform: translateX(2px);
     }
 
-    // ═════════════ 3a. Dimmer current-page highlight ═════════════
+    // Current page: a glossy pill
     &.active {
-      background-color: rgba(217, 119, 87, 0.1);
-      color: var(--secondary);
-      font-weight: 500;
+      background: var(--ui-sheen), var(--ui-surface);
+      color: var(--ui-heading);
+      font-weight: 550;
+      box-shadow:
+        0 0 0 1px var(--ui-border),
+        var(--ui-shadow-sm),
+        var(--ui-highlight);
+      transform: none;
     }
   }
 }
 
-// ═════════════ 3b. Dimmer tag highlight ═════════════
-// Tags become small pills instead of a full-width bar.
+// Mobile explorer drawer: a frosted, tinted sheet over the page.
+// The plugin normally slides the page off-screen while the drawer is open; keep
+// it in place instead so the glass has something to blur. The heavy blur plus
+// tint turns the text underneath into a soft haze that doesn't compete with
+// the menu. The extra `.page > #quartz-body` beats the plugin's own rules,
+// which load after this stylesheet.
+@media all and ($mobile) {
+  html .page > #quartz-body.lock-scroll > :not(.sidebar.left:has(.explorer)) {
+    transform: none;
+  }
+
+  .page > #quartz-body .explorer .explorer-content {
+    background-color: var(--ui-drawer-tint);
+    background-image: var(--ui-sheen);
+    background-size: 100% 160px;
+    background-repeat: no-repeat;
+    @include glass-blur(blur(40px) saturate(160%));
+    box-shadow: var(--ui-highlight);
+    transition:
+      transform var(--dur-slow) var(--ease-out),
+      visibility var(--dur-slow) var(--ease-out);
+  }
+}
+
+// ═════════════ 8. Tags ═════════════
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -143,33 +661,54 @@ footer {
   padding: 0;
 }
 
-.tags li,
-a.tag-link {
-  display: inline-block;
-  width: auto;
-  background-color: rgba(217, 119, 87, 0.1) !important;
-  color: var(--secondary);
-  border-radius: 999px;
-  padding: 0.1rem 0.65rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
 .tags li {
   padding: 0;
   background: none !important;
 }
 
-// ═════════════ 4. Tables ═════════════
-// One rounded box that hugs the table, a tinted header row and faint row lines.
-// The theme's per-cell borders and base.scss's extra margin/padding are dropped.
-// Wide tables scroll sideways inside the box instead of widening the page.
+a.tag-link {
+  display: inline-block;
+  width: auto;
+  background-color: var(--ui-hover) !important;
+  color: var(--ui-muted);
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  padding: 0.08rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur) var(--spring);
+
+  &:hover {
+    background-color: var(--ui-active) !important;
+    color: var(--ui-heading);
+    transform: translateY(-1px);
+  }
+}
+
+// ═════════════ 9. Cards: tables, code, mermaid, callouts ═════════════
+// One shared "glossy card" look: white/graphite surface, hairline border, top
+// sheen, soft shadow.
+%ui-card {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius);
+  background: var(--ui-sheen), var(--ui-surface);
+  background-size:
+    100% 48px,
+    auto;
+  background-repeat: no-repeat;
+  box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
+}
+
+// Tables: the box hugs the table and scrolls sideways when wide.
 .table-container {
+  @extend %ui-card;
   width: fit-content;
   max-width: 100%;
-  margin: 1.25rem 0;
-  border: 1px solid var(--cc-border);
-  border-radius: 10px;
+  margin: 1.4rem 0;
   overflow-x: auto;
 
   & > table {
@@ -179,7 +718,7 @@ a.tag-link {
     border-radius: 0;
     border-collapse: collapse;
     background-color: transparent;
-    font-size: 0.95rem;
+    font-size: 0.94rem;
 
     & > * {
       line-height: 1.5;
@@ -188,24 +727,27 @@ a.tag-link {
     tr {
       border: none;
       background-color: transparent;
+      transition: background-color var(--dur-fast) var(--ease);
     }
 
     th,
     td {
-      padding: 0.5rem 0.9rem;
+      padding: 0.55rem 0.95rem;
       border: none;
-      border-bottom: 1px solid var(--cc-border);
+      border-bottom: 1px solid var(--ui-border);
       vertical-align: top;
     }
 
     th {
-      background-color: var(--cc-table-header);
-      color: var(--cc-heading);
+      background-color: var(--ui-surface-2);
+      color: var(--ui-heading);
       font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.01em;
     }
 
-    tbody tr:nth-child(even) {
-      background-color: var(--cc-table-bg);
+    tbody tr:hover {
+      background-color: var(--ui-hover);
     }
 
     tbody tr:last-child td {
@@ -214,13 +756,9 @@ a.tag-link {
   }
 }
 
-// ═════════════ 5. Code ═════════════
-// Blocks: a single box styled like the tables — same border, radius and warm
-// fill instead of the theme's blue, and a title bar that looks like a header row.
-// The theme also borders and pads the inner <code> and every line, which drew
-// a box inside a box with a big gap on top.
+// Code blocks
 figure[data-rehype-pretty-code-figure] {
-  margin: 1.25rem 0;
+  margin: 1.4rem 0;
   border: none;
   border-radius: 0;
   background: none;
@@ -228,14 +766,15 @@ figure[data-rehype-pretty-code-figure] {
   & > [data-rehype-pretty-code-title] {
     width: auto;
     margin: 0;
-    padding: 0.5rem 0.9rem;
-    border: 1px solid var(--cc-border);
+    padding: 0.5rem 0.95rem;
+    border: 1px solid var(--ui-border);
     border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    background-color: var(--cc-table-header);
-    color: var(--cc-heading);
-    font-size: 0.95rem;
-    font-weight: 600;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--ui-sheen), var(--ui-surface-2);
+    color: var(--ui-muted);
+    font-family: var(--codeFont);
+    font-size: 0.8rem;
+    font-weight: 500;
 
     & + pre {
       border-top-left-radius: 0;
@@ -245,70 +784,55 @@ figure[data-rehype-pretty-code-figure] {
 }
 
 pre:has(> code:not(.mermaid)) {
-  margin: 1.25rem 0;
+  @extend %ui-card;
+  margin: 1.4rem 0;
   padding: 0;
-  border: 1px solid var(--cc-border);
-  border-radius: 10px;
-  background-color: var(--cc-table-bg);
+  background: var(--ui-surface-2);
 
   figure > & {
     margin: 0;
   }
 
   & > code {
-    padding: 0.75rem 0;
+    padding: 0.85rem 0;
     border: none;
     border-radius: 0;
     background: none;
-    font-size: 0.875rem;
-    line-height: 1.6;
+    font-size: 0.85rem;
+    line-height: 1.65;
 
     & > [data-line] {
       padding: 0 1rem 0 0.75rem;
-      border-left: 3px solid transparent;
+      border-left: 2px solid transparent;
       background: none;
 
       &[data-highlighted-line] {
-        background-color: var(--highlight);
-        border-left-color: var(--secondary);
+        background-color: var(--ui-hover);
+        border-left-color: var(--ui-heading);
+      }
+
+      &::before {
+        color: var(--ui-faint);
       }
     }
   }
 }
 
-// Inline code: a soft chip, no border.
+// Inline code: a soft chip
 :not(pre) > code {
-  padding: 0.1em 0.35em;
-  border: none;
-  border-radius: 5px;
-  font-size: 0.88em;
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-surface-2);
+  color: var(--ui-heading);
+  font-size: 0.86em;
 }
 
-// ═════════════ 6. Mermaid ═════════════
-// The mermaid script passes these to Mermaid as diagram colours, but the theme
-// defines them as color-mix(), which Mermaid can't parse, so every diagram
-// failed and stayed as text. Plain values equal to the theme defaults (bg/text
-// depth 0%) keep the rest of the page unchanged.
-:root[saved-theme="dark"] {
-  --light: #262624;
-  --darkgray: #eae8e1;
-  --highlight: rgba(217, 119, 87, 0.28);
-}
-
-:root[saved-theme="light"] {
-  --light: #f9f3e7;
-  --darkgray: #34322c;
-  --highlight: rgba(193, 95, 60, 0.22);
-}
-
-// Same box as tables and code blocks (the theme gives it the blue code look).
-// Wide diagrams scroll sideways inside the box.
+// Mermaid: same card; wide diagrams scroll sideways inside it.
 pre:has(> code.mermaid) {
-  margin: 1.25rem 0;
+  @extend %ui-card;
+  margin: 1.4rem 0;
   padding: 1rem;
-  border: 1px solid var(--cc-border);
-  border-radius: 10px;
-  background-color: var(--cc-table-bg);
   overflow-x: auto;
 
   & > code.mermaid {
@@ -319,7 +843,6 @@ pre:has(> code.mermaid) {
     text-align: center;
   }
 
-  // Diagram in the table palette: nodes tinted like header cells, muted lines.
   // Mermaid scopes its own styles to the svg's id, hence !important.
   svg {
     .node rect,
@@ -327,42 +850,169 @@ pre:has(> code.mermaid) {
     .node circle,
     .node ellipse,
     .node path {
-      fill: var(--cc-table-header) !important;
-      stroke: var(--gray) !important;
+      fill: var(--ui-surface-2) !important;
+      stroke: var(--ui-border-strong) !important;
       stroke-width: 1px !important;
     }
 
     .nodeLabel,
     .label,
     .edgeLabel {
-      color: var(--cc-heading) !important;
-      fill: var(--cc-heading) !important;
+      color: var(--ui-heading) !important;
+      fill: var(--ui-heading) !important;
     }
 
     .flowchart-link,
     .edgePath .path {
-      stroke: var(--gray) !important;
+      stroke: var(--ui-faint) !important;
     }
 
     marker path,
     .arrowheadPath {
-      fill: var(--gray) !important;
-      stroke: var(--gray) !important;
+      fill: var(--ui-faint) !important;
+      stroke: var(--ui-faint) !important;
     }
 
     .edgeLabel,
     .edgeLabel p,
     .labelBkg {
-      background-color: var(--cc-table-bg) !important;
+      background-color: var(--ui-surface) !important;
     }
 
     .edgeLabel rect {
-      fill: var(--cc-table-bg) !important;
+      fill: var(--ui-surface) !important;
     }
   }
 }
 
-// ── Mobile: undo desktop-only spacing ──
+// Callouts: monochrome glossy cards; the icon keeps each type recognisable.
+.callout[data-callout] {
+  --color: rgb(var(--ui-callout-rgb));
+  --border: var(--ui-border);
+  --bg: var(--ui-surface);
+  @extend %ui-card;
+  padding: 0 1.1rem;
+
+  & > .callout-content {
+    transition: grid-template-rows var(--dur) var(--ease-out);
+  }
+
+  .callout-title {
+    color: var(--ui-heading);
+    font-weight: 600;
+  }
+
+  .callout-icon,
+  .fold-callout-icon {
+    background-color: var(--ui-muted);
+    transition: transform var(--dur) var(--spring);
+  }
+}
+
+// Blockquotes
+blockquote {
+  margin: 1.4rem 0;
+  padding: 0.2rem 1.1rem;
+  border-left: 3px solid var(--ui-border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--ui-hover);
+  color: var(--ui-muted);
+}
+
+// Transclusions (embedded notes)
+.transclude {
+  border-left: 2px solid var(--ui-border-strong);
+  padding-left: 1rem;
+}
+
+// Highlights (==text==)
+.text-highlight {
+  background-color: var(--textHighlight);
+  color: var(--ui-heading);
+}
+
+// Images: rounded with a soft lift
+article img {
+  border-radius: var(--radius);
+  box-shadow: var(--ui-shadow);
+}
+
+// Checkboxes: iOS-style rounded squares, black/white when ticked
+input[type="checkbox"] {
+  border: 1.5px solid var(--ui-border-strong);
+  border-radius: 5px;
+  background-color: var(--ui-surface);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    transform var(--dur) var(--spring);
+
+  &:active {
+    transform: translateY(2px) scale(0.88);
+  }
+
+  &:checked {
+    border-color: var(--ui-heading);
+    background-color: var(--ui-heading);
+
+    &::after {
+      border-color: var(--ui-page);
+    }
+  }
+}
+
+// ═════════════ 10. Popovers (link previews) ═════════════
+.popover {
+  transition:
+    opacity var(--dur) var(--ease),
+    visibility var(--dur) var(--ease);
+
+  & > .popover-inner {
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-lg);
+    background: var(--ui-sheen), var(--ui-glass-strong);
+    background-size:
+      100% 80px,
+      auto;
+    background-repeat: no-repeat;
+    @include glass-blur(blur(30px) saturate(180%));
+    box-shadow: var(--ui-shadow-lg), var(--ui-highlight);
+    font-family: var(--bodyFont);
+    color: var(--ui-text);
+    transform: translateY(4px) scale(0.97);
+    transform-origin: top left;
+    transition: transform var(--dur-slow) var(--spring);
+  }
+
+  &.active-popover > .popover-inner,
+  &:hover > .popover-inner {
+    transform: none;
+  }
+}
+
+// ═════════════ 11. Scrollbars ═════════════
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ui-border-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// ═════════════ 12. Mobile ═════════════
 @media (max-width: 800px) {
   .center,
   .page-header,
@@ -371,11 +1021,27 @@ pre:has(> code.mermaid) {
     padding-right: 1rem;
   }
 
+  .page article > h1,
+  h1.article-title {
+    font-size: 1.95rem;
+  }
+
   pre:has(> code:not(.mermaid)) > code {
     font-size: 0.8rem;
   }
 
   .table-container > table {
     font-size: 0.88rem;
+  }
+}
+
+// ═════════════ 13. Reduced motion ═════════════
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

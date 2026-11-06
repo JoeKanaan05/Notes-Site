@@ -14,6 +14,22 @@ const mermaidImportMap = JSON.stringify({
   },
 })
 
+// SPA navigation morphs the page in place, so a CSS entrance animation would
+// only play on the first load. Re-add `.page-enter` on every `nav` to replay it
+// (styles in custom.scss). `data-persist` keeps one copy across navigations.
+const pageEnterScript = `
+(() => {
+  const replay = () => {
+    for (const el of document.querySelectorAll(".center, .page-header")) {
+      el.classList.remove("page-enter")
+      void el.offsetWidth
+      el.classList.add("page-enter")
+    }
+  }
+  document.addEventListener("nav", replay)
+})()
+`
+
 export default (() => {
   const Head: QuartzComponent = ({
     cfg,
@@ -53,6 +69,7 @@ export default (() => {
         <title>{title}</title>
         <meta charSet="utf-8" />
         <script type="importmap" dangerouslySetInnerHTML={{ __html: mermaidImportMap }} />
+        <script data-persist dangerouslySetInnerHTML={{ __html: pageEnterScript }} />
         {coreStylesheet && <link rel="preload" href={coreStylesheet} as="style" />}
         {coreScript && coreScript.contentType === "external" && (
           <link rel="preload" href={coreScript.src} as="script" />

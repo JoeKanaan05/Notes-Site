@@ -16,30 +16,30 @@ configuration:
     fontOrigin: googleFonts
     cdnCaching: true
     typography:
-      header: Source Serif 4
-      body: Source Serif 4
+      header: Inter
+      body: Inter
       code: JetBrains Mono
     colors:
       lightMode:
-        light: "#faf8f8"
-        lightgray: "#e5e5e5"
-        gray: "#b8b8b8"
-        darkgray: "#4e4e4e"
-        dark: "#2b2b2b"
-        secondary: "#284b63"
-        tertiary: "#84a59d"
-        highlight: rgba(143, 159, 169, 0.15)
-        textHighlight: "#fff23688"
+        light: "#fbfbfd"
+        lightgray: "#e8e8ed"
+        gray: "#a1a1a6"
+        darkgray: "#3a3a3c"
+        dark: "#1d1d1f"
+        secondary: "#1d1d1f"
+        tertiary: "#6e6e73"
+        highlight: rgba(0, 0, 0, 0.045)
+        textHighlight: rgba(0, 0, 0, 0.1)
       darkMode:
-        light: "#161618"
-        lightgray: "#393639"
-        gray: "#646464"
-        darkgray: "#d4d4d4"
-        dark: "#ebebec"
-        secondary: "#7b97aa"
-        tertiary: "#84a59d"
-        highlight: rgba(143, 159, 169, 0.15)
-        textHighlight: "#b3aa0288"
+        light: "#0b0b0c"
+        lightgray: "#2c2c2e"
+        gray: "#6e6e73"
+        darkgray: "#d1d1d6"
+        dark: "#f5f5f7"
+        secondary: "#f5f5f7"
+        tertiary: "#a1a1a6"
+        highlight: rgba(255, 255, 255, 0.06)
+        textHighlight: rgba(255, 255, 255, 0.16)
 plugins:
   - source: "@quartz-community/created-modified-date"
     enabled: true
@@ -114,7 +114,7 @@ plugins:
   - source: "@quartz-community/quartz-fonts"
     enabled: true
   - source: "@quartz-themes/core"
-    enabled: true
+    enabled: false
     options:
       theme: "claude-code-orange"
       mode: "both"
