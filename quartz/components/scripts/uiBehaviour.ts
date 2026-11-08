@@ -3,9 +3,11 @@
 // once and survives SPA navigation. Kept as a plain-JS string: this repo has no
 // typings/bundling path for `.inline.ts` imports in components.
 //
-// Nothing here registers a cancelable (non-passive) scroll or touch listener: those
-// make the browser wait for script on every scroll event and made the sidebar laggy.
-// Scroll containment is done in CSS (see "Scroll containment" in custom.scss).
+// Avoid cancelable (non-passive) scroll/touch listeners: they make the browser wait
+// for script on every scroll event (that made the sidebar laggy, so its scroll
+// containment is CSS; see "Scroll containment" in custom.scss). The one exception is
+// the mobile search sheet's touch guard below, which only does work while the sheet
+// is open on a phone, because nothing else stops iOS panning the page.
 export const uiBehaviourScript = `
 (() => {
   // 1. Page entrance animation. SPA navigation morphs the page in place, so the CSS
@@ -23,9 +25,10 @@ export const uiBehaviourScript = `
   const vv = window.visualViewport
   let openSheet = null
 
-  // Keep the sheet inside the visible area: with the keyboard up, iOS shrinks the
-  // visible area (the visual viewport) without shrinking the page, and may slide it.
-  // --vv-top follows any slide; --kb is how much is hidden at the bottom (keyboard).
+  // With the keyboard up, iOS shrinks the visible area (the visual viewport) without
+  // shrinking the page, and can slide it. The sheet covers the whole page; these
+  // insets keep its contents inside the visible part: --vv-top is how far the view
+  // has slid down, --kb how much is hidden at the bottom (the keyboard).
   const fitToViewport = () => {
     if (!openSheet || !vv) return
     const hiddenBelow = Math.max(0, window.innerHeight - vv.offsetTop - vv.height)
@@ -46,6 +49,48 @@ export const uiBehaviourScript = `
       sheet.style.removeProperty("--kb")
       openSheet = null
     }
+  }
+
+  // Touch guard. While the keyboard is up, iOS lets a drag pan the page underneath
+  // even with overflow: hidden and touch-action: none, which dragged the search
+  // field off screen and exposed the page. So cancel any drag on the open sheet,
+  // except where something should move:
+  //   - inside the results list, while it can still scroll that way (and then the
+  //     keyboard is dismissed, like iOS apps do);
+  //   - on the search field when it has text (moving the cursor / selecting).
+  const canScroll = (list, dy) =>
+    list.scrollHeight > list.clientHeight + 1 &&
+    (dy < 0 ? list.scrollTop > 0 : list.scrollTop + list.clientHeight < list.scrollHeight - 1)
+
+  const guardTouches = (sheet) => {
+    let startX = 0
+    let startY = 0
+    sheet.addEventListener(
+      "touchstart",
+      (event) => {
+        startX = event.touches[0].clientX
+        startY = event.touches[0].clientY
+      },
+      { passive: true },
+    )
+    sheet.addEventListener(
+      "touchmove",
+      (event) => {
+        if (sheet !== openSheet || !event.cancelable) return
+        const target = event.target instanceof Element ? event.target : sheet
+        const field = sheet.querySelector(".search-bar")
+        if (target === field && field.value) return
+        const dx = startX - event.touches[0].clientX
+        const dy = startY - event.touches[0].clientY
+        const list = target.closest(".results-container")
+        if (list && Math.abs(dy) >= Math.abs(dx) && canScroll(list, dy)) {
+          if (field && document.activeElement === field) field.blur()
+          return
+        }
+        event.preventDefault()
+      },
+      { passive: false },
+    )
   }
 
   // The plugin closes search on Escape or a click whose target is the backdrop
@@ -88,22 +133,7 @@ export const uiBehaviourScript = `
         attributes: true,
         attributeFilter: ["class"],
       })
-      // Like iOS apps: start scrolling the results and the keyboard goes away.
-      sheet.addEventListener(
-        "touchmove",
-        (event) => {
-          const field = sheet.querySelector(".search-bar")
-          if (
-            field &&
-            document.activeElement === field &&
-            event.target instanceof Element &&
-            event.target.closest(".results-container")
-          ) {
-            field.blur()
-          }
-        },
-        { passive: true },
-      )
+      guardTouches(sheet)
     }
     if (openSheet && !openSheet.isConnected) openSheet = null
   }

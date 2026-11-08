@@ -1371,12 +1371,17 @@ input[type="checkbox"] {
   //   └─────────────────────────────┘   ← ends above the keyboard
   // - The sheet is the same heavy frosted glass as the menu drawer, so the
   //   page underneath effectively disappears.
-  // - `touch-action: none` on the sheet means a drag anywhere on it can't
-  //   scroll or pan the page; the results list opts back in with `pan-y`.
-  // - uiBehaviour.ts adds the Cancel button (the plugin only closes on
-  //   Escape or a tap on the bare backdrop, which a phone mostly lacks),
-  //   keeps the sheet inside the visible area above the keyboard (--vv-top,
-  //   --kb), and dismisses the keyboard when you start scrolling results.
+  // - The sheet always covers the whole screen, keyboard area included; only
+  //   its contents are inset to the visible area (padding from --vv-top and
+  //   --kb, set by uiBehaviour.ts). If iOS pans the view while the keyboard
+  //   is up, you still only ever see the sheet, never the page.
+  // - iOS ignores `touch-action` / `overflow: hidden` for that pan while the
+  //   keyboard is up, so uiBehaviour.ts cancels drags on the sheet that would
+  //   move the page (only while it's open, only on phones). touch-action
+  //   stays as a hint for other mobile browsers.
+  // - uiBehaviour.ts also adds the Cancel button (the plugin only closes on
+  //   Escape or a tap on the bare backdrop, which a phone mostly lacks) and
+  //   dismisses the keyboard when you start scrolling results.
   // `html body` outranks the plugin's selectors, which load after this file.
   html body .search > .search-container {
     --sheet-gap: 0.75rem;
@@ -1389,13 +1394,15 @@ input[type="checkbox"] {
     --sheet-shadow: var(--ui-shadow-sm);
     --sheet-blur: none; // the sheet itself is blurred; don't blur twice
     box-sizing: border-box;
-    top: var(--vv-top, 0px);
-    bottom: var(--kb, 0px);
+    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
     width: auto;
     height: auto;
-    padding-bottom: max(0px, env(safe-area-inset-bottom) - var(--kb, 0px));
+    padding-top: var(--vv-top, 0px);
+    // Keyboard up: stop above it. Down: clear the home indicator.
+    padding-bottom: max(var(--kb, 0px), env(safe-area-inset-bottom));
     overflow: hidden;
     background: var(--ui-drawer-tint);
     @include glass-blur(blur(40px) saturate(160%));
@@ -1459,7 +1466,8 @@ input[type="checkbox"] {
 
     & > .search-cancel {
       position: absolute;
-      top: var(--sheet-top);
+      // Absolute boxes ignore the sheet's padding, so add the inset here too.
+      top: calc(var(--vv-top, 0px) + var(--sheet-top));
       right: 1rem;
       display: flex;
       align-items: center;
