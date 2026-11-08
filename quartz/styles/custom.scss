@@ -187,8 +187,7 @@ pre,
 .callout,
 blockquote,
 .popover-inner,
-.darkmode,
-.readermode {
+.darkmode {
   transition:
     background-color var(--dur-slow) var(--ease),
     border-color var(--dur-slow) var(--ease),
@@ -479,8 +478,7 @@ footer {
   }
 }
 
-.darkmode,
-.readermode {
+.darkmode {
   @extend %ui-round-button;
   width: 2.25rem;
   height: 2.25rem;
@@ -656,9 +654,31 @@ footer {
   }
 
   .folder-container {
+    // The plugin's click target is a <button> only as wide as the folder name
+    // (plus the chevron, which has its own handler). Stretch the button over
+    // the whole row: it fills the row, and its ::after covers the chevron and
+    // padding too, so anywhere on the highlighted row toggles the folder.
+    position: relative;
     padding: 0.22rem 0.4rem;
     border-radius: var(--radius-sm);
+    cursor: pointer;
     transition: background-color var(--dur-fast) var(--ease);
+
+    & > div {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    & > div > button {
+      width: 100%;
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+    }
 
     .folder-title,
     .folder-button span,
@@ -686,9 +706,12 @@ footer {
     }
   }
 
-  // Note rows
+  // Note rows: the link is the whole row, so the click area matches the
+  // hover highlight.
   li > a {
     display: block;
+    width: 100%;
+    box-sizing: border-box;
     padding: 0.24rem 0.55rem;
     border-radius: var(--radius-sm);
     font-size: 0.91rem;
@@ -728,21 +751,36 @@ footer {
 
 // ═════════════ 8. Mobile: top bar + menu drawer ═════════════
 @media all and ($mobile) {
-  // Top bar: [menu] [title ……] [search] [theme] [reader], frosted glass,
-  // stuck to the top, full-bleed past #quartz-body's 1rem side padding.
-  // The glass lives on ::before: a backdrop-filter on the bar itself would
-  // trap the search overlay and the drawer (both position: fixed/absolute
-  // children) inside the bar.
+  // Bar height: 0.6rem padding top and bottom around 2.25rem buttons, plus
+  // the notch inset. The page is padded by this much so nothing hides under it.
+  html:root {
+    --mobile-bar-h: calc(3.45rem + env(safe-area-inset-top));
+    scroll-padding-top: calc(var(--mobile-bar-h) + 0.75rem);
+  }
+
+  .page > #quartz-body {
+    padding-top: var(--mobile-bar-h);
+  }
+
+  // Top bar: [menu] [title ……] [search] [theme], frosted glass, fixed to the
+  // top. (It used to be `sticky`, but a sticky grid item can only stick
+  // within its own grid cell, which is exactly the bar's height, so it
+  // scrolled away.) The glass lives on ::before: a backdrop-filter on the
+  // bar itself would trap the search overlay and the drawer (both
+  // positioned children) inside the bar.
   html .page > #quartz-body .sidebar.left,
   html .page > #quartz-body .sidebar.left:has(.explorer) {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 50;
+    box-sizing: border-box;
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
-    margin: 0 -1rem;
+    margin: 0;
     padding: calc(0.6rem + env(safe-area-inset-top)) 1rem 0.6rem;
     background: transparent;
     height: auto;
@@ -755,6 +793,9 @@ footer {
       background: var(--ui-sheen), var(--ui-glass);
       @include glass-blur(saturate(180%) blur(20px));
       border-bottom: 1px solid var(--ui-border);
+      // Own compositor layer, so the blur doesn't repaint and lag while the
+      // page scrolls underneath.
+      transform: translateZ(0);
     }
 
     // Title takes the free space and truncates instead of pushing buttons.
@@ -1300,6 +1341,108 @@ input[type="checkbox"] {
   .search-container .search-space {
     width: calc(100% - 1.5rem);
     margin-top: calc(1rem + env(safe-area-inset-top));
+  }
+
+  // While the menu is open (the explorer adds .mobile-no-scroll) the page
+  // behind can't scroll.
+  html.mobile-no-scroll {
+    overflow: hidden;
+  }
+
+  // Menu list: always scrollable by 1px (see the note below section 13).
+  .explorer-content > .explorer-ul {
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: calc(100% + 1px);
+      pointer-events: none;
+    }
+  }
+
+  // No scrollbars on phones; swiping still scrolls.
+  * {
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+// ═════════════ Scroll containment (CSS only) ═════════════
+// Scrolling over the sidebar, search or mobile menu must never move the page.
+// This is deliberately CSS, not JavaScript: a cancelable (non-passive) wheel
+// or touch listener makes the browser wait for script on every scroll event
+// over that area, which made sidebar scrolling laggy.
+//
+// `overscroll-behavior: contain` stops leftover scroll reaching the page, but
+// browsers only honour it on an element that can actually scroll. So the
+// sidebar and its file list each get an invisible 1px overhang (an absolute
+// ::after 1px taller than the box), keeping them always scrollable, and
+// hence always the end of the scroll chain. Their scrollbars are hidden;
+// trackpad and wheel scrolling still work.
+
+// Search open: lock the page itself (all screen sizes).
+html:has(.search-container.active) {
+  overflow-y: hidden;
+}
+
+.explorer-content,
+.explorer-ul,
+.search-container,
+.results-container,
+.preview-container {
+  overscroll-behavior: contain;
+}
+
+@media all and (min-width: 801px) {
+  // The whole sidebar: covers the title, toolbar and empty space below the list.
+  // (On phones the sidebar is the fixed top bar, section 8.)
+  .page > #quartz-body .sidebar.left {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: calc(100% + 1px);
+      pointer-events: none;
+    }
+  }
+
+  // The file list, so a short list doesn't hand scroll to the sidebar's 1px.
+  .page > #quartz-body .sidebar.left .explorer-content {
+    position: relative;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: calc(100% + 1px);
+      pointer-events: none;
+    }
   }
 }
 

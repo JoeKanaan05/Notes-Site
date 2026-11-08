@@ -4,6 +4,7 @@ import { CSSResourceToStyleElement, JSResourceToScriptElement } from "../util/re
 import { googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { unescapeHTML } from "../util/escape"
+import { uiBehaviourScript } from "./scripts/uiBehaviour"
 
 // The obsidian-flavored-markdown plugin hardcodes Mermaid 11.4.0, which draws an
 // arrowhead on plain `---` links. Redirect its dynamic import to a fixed release.
@@ -13,22 +14,6 @@ const mermaidImportMap = JSON.stringify({
       "https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.17.2/mermaid.esm.min.mjs",
   },
 })
-
-// SPA navigation morphs the page in place, so a CSS entrance animation would
-// only play on the first load. Re-add `.page-enter` on every `nav` to replay it
-// (styles in custom.scss). `data-persist` keeps one copy across navigations.
-const pageEnterScript = `
-(() => {
-  const replay = () => {
-    for (const el of document.querySelectorAll(".center, .page-header")) {
-      el.classList.remove("page-enter")
-      void el.offsetWidth
-      el.classList.add("page-enter")
-    }
-  }
-  document.addEventListener("nav", replay)
-})()
-`
 
 export default (() => {
   const Head: QuartzComponent = ({
@@ -69,7 +54,8 @@ export default (() => {
         <title>{title}</title>
         <meta charSet="utf-8" />
         <script type="importmap" dangerouslySetInnerHTML={{ __html: mermaidImportMap }} />
-        <script data-persist dangerouslySetInnerHTML={{ __html: pageEnterScript }} />
+        {/* Page entrance animation; data-persist keeps one copy across SPA navs. */}
+        <script data-persist dangerouslySetInnerHTML={{ __html: uiBehaviourScript }} />
         {coreStylesheet && <link rel="preload" href={coreStylesheet} as="style" />}
         {coreScript && coreScript.contentType === "external" && (
           <link rel="preload" href={coreScript.src} as="script" />
