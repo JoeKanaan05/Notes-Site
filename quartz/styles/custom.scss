@@ -562,16 +562,19 @@ html body .search > .search-container {
   & > .search-space {
     max-width: 760px;
 
+    // The search box and the results card. Radius, shadow, blur and gap are
+    // custom properties so the mobile sheet (section 13) can change them
+    // without out-ranking this selector.
     & > *:not(.ghost-text):not(.tag-suggestions) {
       border: 1px solid var(--ui-border);
-      border-radius: var(--radius-lg);
+      border-radius: var(--sheet-radius, var(--radius-lg));
       background: var(--ui-sheen), var(--ui-glass-strong);
       background-size:
         100% 80px,
         auto;
       background-repeat: no-repeat;
-      @include glass-blur(blur(30px) saturate(180%));
-      box-shadow: var(--ui-shadow-lg), var(--ui-highlight);
+      @include glass-blur(var(--sheet-blur, blur(30px) saturate(180%)));
+      box-shadow: var(--sheet-shadow, var(--ui-shadow-lg)), var(--ui-highlight);
       overflow: hidden;
       margin-bottom: var(--sheet-item-gap, 1rem);
     }
@@ -630,6 +633,12 @@ html body .search > .search-container {
       }
     }
   }
+}
+
+// Mobile-only Cancel button injected by uiBehaviour.ts (shown in section 13).
+// Desktop closes search with Escape or a click on the backdrop.
+.search-cancel {
+  display: none;
 }
 
 // ═════════════ 7. Explorer ═════════════
@@ -1356,31 +1365,68 @@ input[type="checkbox"] {
     font-size: 0.88rem;
   }
 
-  // Search overlay. uiBehaviour.ts pins it to the visible area (above the
-  // keyboard) via --vv-top / --vv-height and freezes the page underneath.
-  // Inside, the sheet is a column: the search box stays put and only the
-  // results scroll, shrinking to fit whatever height is left. The overlay
-  // itself never scrolls. `html body` outranks the plugin's selectors, which
-  // load after this stylesheet.
+  // Search: a full-screen, app-style sheet.
+  //   [ search field ………………… ] Cancel
+  //   ┌ results (only this scrolls) ┐
+  //   └─────────────────────────────┘   ← ends above the keyboard
+  // - The sheet is the same heavy frosted glass as the menu drawer, so the
+  //   page underneath effectively disappears.
+  // - `touch-action: none` on the sheet means a drag anywhere on it can't
+  //   scroll or pan the page; the results list opts back in with `pan-y`.
+  // - uiBehaviour.ts adds the Cancel button (the plugin only closes on
+  //   Escape or a tap on the bare backdrop, which a phone mostly lacks),
+  //   keeps the sheet inside the visible area above the keyboard (--vv-top,
+  //   --kb), and dismisses the keyboard when you start scrolling results.
+  // `html body` outranks the plugin's selectors, which load after this file.
   html body .search > .search-container {
+    --sheet-gap: 0.75rem;
+    --sheet-top: calc(var(--sheet-gap) + env(safe-area-inset-top));
+    --field-h: 2.75rem;
+    --cancel-w: 4.75rem;
+    // Read by the search box / results card rule in section 6.
+    --sheet-item-gap: var(--sheet-gap);
+    --sheet-radius: 14px;
+    --sheet-shadow: var(--ui-shadow-sm);
+    --sheet-blur: none; // the sheet itself is blurred; don't blur twice
+    box-sizing: border-box;
     top: var(--vv-top, 0px);
-    height: var(--vv-height, 100dvh);
+    bottom: var(--kb, 0px);
+    left: 0;
+    right: 0;
+    width: auto;
+    height: auto;
+    padding-bottom: max(0px, env(safe-area-inset-bottom) - var(--kb, 0px));
     overflow: hidden;
+    background: var(--ui-drawer-tint);
+    @include glass-blur(blur(40px) saturate(160%));
+    touch-action: none;
 
     & > .search-space {
-      // Gap above the box, between box and results, and below the results
-      // (the last two come from each item's margin-bottom, section 6).
-      --sheet-item-gap: 0.75rem;
-      --sheet-top: calc(var(--sheet-item-gap) + env(safe-area-inset-top));
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      width: calc(100% - 1.5rem);
+      width: auto;
+      max-width: none;
       height: calc(100% - var(--sheet-top));
-      margin: var(--sheet-top) auto 0;
+      margin: var(--sheet-top) 1rem 0;
 
+      // 17px: iOS zooms the page when focusing a field smaller than 16px.
       & > input {
         flex: none;
+        box-sizing: border-box;
+        max-width: calc(100% - var(--cancel-w));
+        height: var(--field-h);
+        padding: 0 0.9rem;
+        font-size: 17px;
+      }
+
+      // The autocomplete hint overlays the field, so it mirrors its box.
+      & > .ghost-text {
+        right: var(--cancel-w);
+        height: var(--field-h);
+        padding: 0 0.9rem;
+        font-size: 17px;
+        line-height: calc(var(--field-h) - 2px);
       }
 
       & > .search-layout {
@@ -1397,7 +1443,41 @@ input[type="checkbox"] {
           max-height: none;
           overflow-y: auto;
           overscroll-behavior: contain;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
         }
+
+        & > .results-container .result-card {
+          padding: 0.85rem 1rem;
+
+          &:active {
+            background: var(--ui-active);
+          }
+        }
+      }
+    }
+
+    & > .search-cancel {
+      position: absolute;
+      top: var(--sheet-top);
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      width: var(--cancel-w);
+      height: var(--field-h);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--ui-link);
+      font-family: var(--bodyFont);
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity var(--dur-fast) var(--ease);
+
+      &:active {
+        opacity: 0.45;
       }
     }
   }
@@ -1450,8 +1530,8 @@ input[type="checkbox"] {
 
 // Search open: lock the page itself (all screen sizes), and stop the root
 // rubber-band so dragging the overlay's backdrop doesn't bounce the page.
-// (On phones uiBehaviour.ts also freezes the body, since iOS ignores
-// overflow: hidden while the keyboard is up.)
+// (On phones the sheet's `touch-action: none` also stops drags reaching the
+// page, since iOS ignores overflow: hidden while the keyboard is up.)
 html:has(.search-container.active) {
   overflow-y: hidden;
   overscroll-behavior: none;
