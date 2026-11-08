@@ -543,19 +543,23 @@ footer {
   }
 }
 
-.search-container {
+// The search plugin's own selectors (`.search > .search-container >
+// .search-space > …`) are more specific than plain class selectors and load
+// after this stylesheet, so they used to override this whole section. Every
+// rule here repeats that path with `html body` in front so it wins.
+html body .search > .search-container {
   background: var(--ui-scrim);
   @include glass-blur(blur(12px) saturate(140%));
 
   &.active {
     animation: ui-fade-in var(--dur) var(--ease) both;
 
-    .search-space {
+    & > .search-space {
       animation: ui-sheet-in var(--dur-slow) var(--ease-out) both;
     }
   }
 
-  .search-space {
+  & > .search-space {
     max-width: 760px;
 
     & > *:not(.ghost-text):not(.tag-suggestions) {
@@ -569,47 +573,62 @@ footer {
       @include glass-blur(blur(30px) saturate(180%));
       box-shadow: var(--ui-shadow-lg), var(--ui-highlight);
       overflow: hidden;
+      margin-bottom: var(--sheet-item-gap, 1rem);
     }
-  }
 
-  .search-bar {
-    font-family: var(--bodyFont);
-    font-size: 1.15rem;
-    padding: 0.9rem 1.2rem;
-    border: none;
-    background: transparent;
-    color: var(--ui-heading);
+    & > input {
+      font-family: var(--bodyFont);
+      font-size: 1.15rem;
+      padding: 0.9rem 1.2rem;
+      color: var(--ui-heading);
 
-    &::placeholder {
+      &::placeholder {
+        color: var(--ui-faint);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--ui-border-strong);
+      }
+    }
+
+    // The faded autocomplete hint sits on top of the input and must use the
+    // same font and padding, or it drifts out of line with what's typed.
+    & > .ghost-text {
+      font-family: var(--bodyFont);
+      font-size: 1.15rem;
+      padding: 0.9rem 1.2rem;
       color: var(--ui-faint);
     }
 
-    &:focus {
-      outline: none;
+    & > .search-layout {
+      & > .results-container .result-card {
+        border-bottom: 1px solid var(--ui-border);
+        color: var(--ui-text);
+        transition: background-color var(--dur-fast) var(--ease);
+
+        & > h3 {
+          color: var(--ui-heading);
+          letter-spacing: -0.01em;
+        }
+
+        & > p {
+          color: var(--ui-muted);
+        }
+
+        &:hover,
+        &:focus,
+        &.focus {
+          background: var(--ui-hover);
+        }
+      }
+
+      .highlight {
+        background: var(--ui-accent-soft);
+        color: var(--ui-heading);
+        border-radius: 3px;
+      }
     }
-  }
-
-  .results-container .result-card {
-    border-bottom: 1px solid var(--ui-border);
-    color: var(--ui-text);
-    transition: background-color var(--dur-fast) var(--ease);
-
-    & > h3 {
-      color: var(--ui-heading);
-      letter-spacing: -0.01em;
-    }
-
-    &:hover,
-    &:focus,
-    &.focus {
-      background: var(--ui-hover);
-    }
-  }
-
-  .highlight {
-    background: var(--ui-accent-soft);
-    color: var(--ui-heading);
-    border-radius: 3px;
   }
 }
 
@@ -1337,10 +1356,50 @@ input[type="checkbox"] {
     font-size: 0.88rem;
   }
 
-  // Search sheet: nearly full width, closer to the top.
-  .search-container .search-space {
-    width: calc(100% - 1.5rem);
-    margin-top: calc(1rem + env(safe-area-inset-top));
+  // Search overlay. uiBehaviour.ts pins it to the visible area (above the
+  // keyboard) via --vv-top / --vv-height and freezes the page underneath.
+  // Inside, the sheet is a column: the search box stays put and only the
+  // results scroll, shrinking to fit whatever height is left. The overlay
+  // itself never scrolls. `html body` outranks the plugin's selectors, which
+  // load after this stylesheet.
+  html body .search > .search-container {
+    top: var(--vv-top, 0px);
+    height: var(--vv-height, 100dvh);
+    overflow: hidden;
+
+    & > .search-space {
+      // Gap above the box, between box and results, and below the results
+      // (the last two come from each item's margin-bottom, section 6).
+      --sheet-item-gap: 0.75rem;
+      --sheet-top: calc(var(--sheet-item-gap) + env(safe-area-inset-top));
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      width: calc(100% - 1.5rem);
+      height: calc(100% - var(--sheet-top));
+      margin: var(--sheet-top) auto 0;
+
+      & > input {
+        flex: none;
+      }
+
+      & > .search-layout {
+        flex: 0 1 auto;
+        min-height: 0;
+
+        & > div {
+          height: auto;
+        }
+
+        &[data-preview] > .results-container {
+          flex: 0 1 auto;
+          min-height: 0;
+          max-height: none;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
+      }
+    }
   }
 
   // While the menu is open (the explorer adds .mobile-no-scroll) the page
@@ -1389,9 +1448,13 @@ input[type="checkbox"] {
 // hence always the end of the scroll chain. Their scrollbars are hidden;
 // trackpad and wheel scrolling still work.
 
-// Search open: lock the page itself (all screen sizes).
+// Search open: lock the page itself (all screen sizes), and stop the root
+// rubber-band so dragging the overlay's backdrop doesn't bounce the page.
+// (On phones uiBehaviour.ts also freezes the body, since iOS ignores
+// overflow: hidden while the keyboard is up.)
 html:has(.search-container.active) {
   overflow-y: hidden;
+  overscroll-behavior: none;
 }
 
 .explorer-content,
