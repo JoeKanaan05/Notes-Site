@@ -7,7 +7,7 @@ configuration:
   analytics:
     provider: plausible
   locale: en-US
-  baseUrl: Nayas-mac.local:8080
+  baseUrl: notes.joekanaan.dev
   ignorePatterns:
     - private
     - templates
