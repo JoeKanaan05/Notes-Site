@@ -16,30 +16,32 @@ configuration:
     fontOrigin: googleFonts
     cdnCaching: true
     typography:
-      header: Inter
-      body: Inter
-      code: JetBrains Mono
+      header: Pixelify Sans
+      body: IBM Plex Sans
+      code: IBM Plex Mono
+    # "Pixel Parchment": parchment paper, plum ink, blue accent. Mermaid draws
+    # its diagrams from light / darkgray / tertiary / secondary / highlight.
     colors:
       lightMode:
-        light: "#e4f4f6"
-        lightgray: "#c4e5ea"
-        gray: "#7d9298"
-        darkgray: "#24272b"
-        dark: "#16171a"
-        secondary: "#16171a"
-        tertiary: "#e35335"
-        highlight: rgba(22, 23, 26, 0.06)
-        textHighlight: rgba(227, 83, 53, 0.25)
+        light: "#fffaf0"
+        lightgray: "#dccba4"
+        gray: "#7a6a82"
+        darkgray: "#2a1f33"
+        dark: "#2a1f33"
+        secondary: "#2c4f7c"
+        tertiary: "#4f7fb0"
+        highlight: rgba(79, 127, 176, 0.12)
+        textHighlight: "#f4c54288"
       darkMode:
-        light: "#16171a"
-        lightgray: "#2c3036"
-        gray: "#5f7075"
-        darkgray: "#ddeff2"
-        dark: "#b0e0e6"
-        secondary: "#b0e0e6"
-        tertiary: "#e35335"
-        highlight: rgba(176, 224, 230, 0.06)
-        textHighlight: rgba(227, 83, 53, 0.3)
+        light: "#1c1522"
+        lightgray: "#3a2d45"
+        gray: "#9a8aa2"
+        darkgray: "#f3e8cf"
+        dark: "#fffaf0"
+        secondary: "#9cc0e6"
+        tertiary: "#7fa8d4"
+        highlight: rgba(156, 192, 230, 0.12)
+        textHighlight: "#dcb45566"
 plugins:
   - source: "@quartz-community/created-modified-date"
     enabled: true
@@ -111,8 +113,10 @@ plugins:
   - source: "@quartz-community/roam"
     enabled: false
     order: 92
+  # Off: with no options it forces Schibsted Grotesk on h1-h6 and loads a
+  # second font set. Fonts come from configuration.theme.typography instead.
   - source: "@quartz-community/quartz-fonts"
-    enabled: true
+    enabled: false
   - source: "@quartz-themes/core"
     enabled: false
     options:

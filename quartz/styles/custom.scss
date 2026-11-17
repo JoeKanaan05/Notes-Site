@@ -1,135 +1,127 @@
 @use "./base.scss";
 @use "./variables.scss" as *;
 
-// Frosted-glass blur. Both spellings are needed (Safari < 18 only reads the
+// Sets backdrop-filter. Both spellings are needed (Safari < 18 only reads the
 // prefixed one), and the CSS minifier collapses the pair into one if they are
 // written as literals, so the value goes through a custom property.
-//
-// Never put this on an element that contains position: fixed children (the
-// sidebar holds the search overlay and the mobile drawer): backdrop-filter
-// turns it into their containing block and traps them inside it. Use a
-// ::before layer instead, as the mobile top bar does.
-@mixin glass-blur($value) {
+@mixin backdrop($value) {
   --ui-backdrop: #{$value};
   -webkit-backdrop-filter: var(--ui-backdrop);
   backdrop-filter: var(--ui-backdrop);
 }
 
 // ═════════════════════════════════════════════════════════════════════════
-// Raven / powder blue / poppy glass theme
-// Palette: #16171A raven black, #B0E0E6 powder blue, #E35335 poppy red.
-// Base palette (--light, --dark, …) lives in quartz.config.yaml; the tokens
-// below add the surfaces, accents, shadows and sheens.
+// "Pixel Parchment" theme (see ~/Documents/coding/Home page/DESIGN.md)
+// Parchment panels with hard, notched pixel borders and one plum ink; pixel
+// font for chrome and headings, a plain readable sans-serif for everything
+// you actually read. No radius, no blur, no soft shadows.
+// Base palette (--light, --dark, …) lives in quartz.config.yaml (mermaid
+// reads it too); the tokens below add the surfaces, accent and borders.
 // ═════════════════════════════════════════════════════════════════════════
 
 // ═════════════ 0. Tokens ═════════════
 html:root {
-  // Type: SF Pro on Apple devices, Inter (loaded from Google Fonts) elsewhere.
-  --bodyFont:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", system-ui,
-    sans-serif;
-  --headerFont:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", system-ui,
-    sans-serif;
-  --codeFont: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --headerFont: "Pixelify Sans", "Courier New", monospace;
+  --titleFont: var(--headerFont);
+  --bodyFont: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --codeFont: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  // Motion: Apple-style ease-out and a gentle spring with a hint of overshoot.
-  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --spring: cubic-bezier(0.34, 1.36, 0.64, 1);
-  --dur-fast: 160ms;
-  --dur: 280ms;
-  --dur-slow: 480ms;
+  // Calm, stepped motion only.
+  --dur-fast: 120ms;
+  --dur: 320ms;
+  --steps: steps(5);
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --px: 3px; // one "pixel" of chrome: border width, shadow offset
 
-  // Brand
-  --brand-raven: #16171a;
-  --brand-powder: #b0e0e6;
-  --brand-poppy: #e35335;
+  // Fixed palette
+  --ink: #2a1f33;
+  --ink-soft: #5a4b63;
+  --parchment: #f6ecd2;
+  --parchment-hi: #fffaf0;
+  --parchment-lo: #dccba4;
+  --signal: #ff8a2a;
+  --gold: #f4c542;
+  --accent: #4f7fb0;
 
-  // Light: powder-blue sidebar, paler powder reading area, raven text.
-  --ui-page: #e4f4f6;
-  --ui-sidebar: var(--brand-powder);
-  --ui-sidebar-edge: #93c9d1;
-  --ui-surface: #f3fafb;
-  --ui-surface-2: #d7eef1;
-  --ui-hover: rgba(22, 23, 26, 0.05);
-  --ui-active: rgba(22, 23, 26, 0.09);
-  --ui-border: rgba(22, 23, 26, 0.1);
-  --ui-border-strong: rgba(22, 23, 26, 0.2);
-  --ui-text: #24272b;
-  --ui-heading: var(--brand-raven);
-  --ui-muted: #44535a;
-  --ui-faint: #7d9298;
-
-  // Accents
-  --ui-link: var(--brand-raven);
-  --ui-link-line: var(--brand-poppy);
-  --ui-accent: var(--brand-poppy);
-  --ui-accent-soft: rgba(227, 83, 53, 0.18);
-  --ui-on-accent: var(--brand-raven);
-  --ui-pill-bg: var(--brand-raven);
-  --ui-pill-text: var(--brand-powder);
-
-  // Glass
-  --ui-glass: rgba(176, 224, 230, 0.72);
-  --ui-glass-strong: rgba(243, 250, 251, 0.85);
-  --ui-drawer-tint: rgba(228, 244, 246, 0.84);
-  --ui-scrim: rgba(228, 244, 246, 0.5);
-  --ui-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
-  --ui-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  --ui-shadow-sm: 0 1px 2px rgba(22, 23, 26, 0.05), 0 1px 3px rgba(22, 23, 26, 0.05);
-  --ui-shadow: 0 1px 2px rgba(22, 23, 26, 0.05), 0 6px 20px rgba(22, 23, 26, 0.08);
-  --ui-shadow-lg: 0 2px 6px rgba(22, 23, 26, 0.06), 0 24px 60px rgba(22, 23, 26, 0.18);
-  --ui-callout-rgb: 227, 83, 53;
+  // Light: parchment-hi reading area, parchment sidebar and panels, plum ink.
+  --ui-page: var(--parchment-hi);
+  --ui-sidebar: var(--parchment);
+  --ui-surface: var(--parchment);
+  --ui-surface-2: #efe2c2;
+  --ui-card: var(--parchment-hi); // popovers, search sheet, link plates
+  --ui-line: var(--ink); // every outline
+  --ui-plate-hi: var(--parchment-hi);
+  --ui-plate-lo: var(--parchment-lo);
+  --ui-drop: rgba(42, 31, 51, 0.32);
+  --ui-hover: rgba(42, 31, 51, 0.07);
+  --ui-active: rgba(42, 31, 51, 0.12);
+  --ui-rule: var(--parchment-lo); // quiet dividers inside panels
+  --ui-text: var(--ink);
+  --ui-heading: var(--ink);
+  --ui-muted: var(--ink-soft);
+  --ui-faint: #7a6a82;
+  --ui-accent-deep: #2c4f7c; // text-safe accent: links, h2, labels
+  --ui-tint: #e6edf4;
+  --ui-invert-bg: var(--ink); // hovered / current item
+  --ui-invert-text: var(--parchment-hi);
+  --ui-scrim: rgba(42, 31, 51, 0.55);
+  --ui-selection: rgba(255, 138, 42, 0.3);
   color-scheme: light;
+
+  // The notched pixel border: four separate ink shadows (corners stay empty),
+  // a highlight on top, shade underneath and a hard drop shadow.
+  --ui-plate:
+    inset 0 var(--px) 0 0 var(--ui-plate-hi), inset 0 calc(var(--px) * -1) 0 0 var(--ui-plate-lo),
+    calc(var(--px) * -1) 0 0 0 var(--ui-line), var(--px) 0 0 0 var(--ui-line),
+    0 calc(var(--px) * -1) 0 0 var(--ui-line), 0 var(--px) 0 0 var(--ui-line),
+    0 calc(var(--px) * 2.5) 0 0 var(--ui-drop);
+  // Same outline without the light; for hovered plates and framed images.
+  --ui-frame:
+    calc(var(--px) * -1) 0 0 0 var(--ui-line), var(--px) 0 0 0 var(--ui-line),
+    0 calc(var(--px) * -1) 0 0 var(--ui-line), 0 var(--px) 0 0 var(--ui-line),
+    0 calc(var(--px) * 2.5) 0 0 var(--ui-drop);
 }
 
-// Dark: raven page, powder-blue headings and links, poppy accents.
+// Dark: night parchment. Panels sit lighter than the page and keep a dark
+// outline, so the pixel borders still read.
 html:root[saved-theme="dark"] {
-  --ui-page: var(--brand-raven);
-  --ui-sidebar: #1d1f23;
-  --ui-sidebar-edge: #2c3036;
-  --ui-surface: #212429;
-  --ui-surface-2: #1b1d21;
-  --ui-hover: rgba(176, 224, 230, 0.06);
-  --ui-active: rgba(176, 224, 230, 0.1);
-  --ui-border: rgba(176, 224, 230, 0.1);
-  --ui-border-strong: rgba(176, 224, 230, 0.2);
-  --ui-text: #ddeff2;
-  --ui-heading: var(--brand-powder);
-  --ui-muted: #93a9ae;
-  --ui-faint: #5f7075;
-
-  --ui-link: var(--brand-powder);
-  --ui-link-line: var(--brand-poppy);
-  --ui-accent: var(--brand-poppy);
-  --ui-accent-soft: rgba(227, 83, 53, 0.24);
-  --ui-on-accent: var(--brand-raven);
-  --ui-pill-bg: var(--brand-poppy);
-  --ui-pill-text: var(--brand-raven);
-
-  --ui-glass: rgba(29, 31, 35, 0.72);
-  --ui-glass-strong: rgba(33, 36, 41, 0.84);
-  --ui-drawer-tint: rgba(22, 23, 26, 0.82);
-  --ui-scrim: rgba(5, 6, 7, 0.5);
-  --ui-sheen: linear-gradient(180deg, rgba(176, 224, 230, 0.05) 0%, rgba(176, 224, 230, 0) 100%);
-  --ui-highlight: inset 0 1px 0 rgba(176, 224, 230, 0.06);
-  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --ui-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --ui-shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.4), 0 28px 70px rgba(0, 0, 0, 0.6);
-  --ui-callout-rgb: 227, 83, 53;
+  --ui-page: #1c1522;
+  --ui-sidebar: #251c2d;
+  --ui-surface: #2d2337;
+  --ui-surface-2: #382b44;
+  --ui-card: #2d2337;
+  --ui-line: #0c080f;
+  --ui-plate-hi: rgba(255, 250, 240, 0.08);
+  --ui-plate-lo: rgba(0, 0, 0, 0.3);
+  --ui-drop: rgba(0, 0, 0, 0.55);
+  --ui-hover: rgba(255, 250, 240, 0.06);
+  --ui-active: rgba(255, 250, 240, 0.1);
+  --ui-rule: #46374f;
+  --ui-text: #f3e8cf;
+  --ui-heading: var(--parchment-hi);
+  --ui-muted: #c9bccb;
+  --ui-faint: #9a8aa2;
+  --ui-accent-deep: #9cc0e6;
+  --ui-tint: #2c3b52;
+  --ui-invert-bg: var(--parchment);
+  --ui-invert-text: var(--ink);
+  --ui-scrim: rgba(8, 5, 10, 0.65);
+  --ui-selection: rgba(255, 138, 42, 0.35);
   color-scheme: dark;
 }
 
-// ═════════════ 1. Page, type, smooth theme switching ═════════════
+// ═════════════ 1. Page, type ═════════════
 
 // Over-scroll ("rubber-band"): browsers fill the area past the page with the
-// root element's background *colour* only (gradients and images don't extend
-// into it), so the page colour must sit on <html> as a plain colour.
+// root element's background *colour* only, so the page colour must sit on
+// <html> as a plain colour.
 html {
   --sb-left: max(0px, calc((100vw - 1500px) / 2));
   --sb-width: 290px;
@@ -159,17 +151,17 @@ html {
     left: var(--sb-left);
     width: var(--sb-width);
     box-sizing: border-box;
-    border-right: 1px solid var(--ui-sidebar-edge);
+    border-right: var(--px) solid var(--ui-line);
     background: var(--ui-sidebar);
     z-index: -1;
     pointer-events: none;
-    transition: background-color var(--dur-slow) var(--ease);
   }
 }
 
 body {
   background-color: transparent;
   color: var(--ui-text);
+  font-family: var(--bodyFont);
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -177,44 +169,35 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-// Cross-fade colours when toggling light/dark instead of snapping.
-body,
-.sidebar.left,
-.sidebar.left::before,
-.search-button,
-.table-container,
-pre,
-.callout,
-blockquote,
-.popover-inner,
-.darkmode {
-  transition:
-    background-color var(--dur-slow) var(--ease),
-    border-color var(--dur-slow) var(--ease),
-    color var(--dur-slow) var(--ease),
-    box-shadow var(--dur-slow) var(--ease);
-}
-
 ::selection {
-  background: var(--ui-accent-soft);
+  background: var(--ui-selection);
   color: var(--ui-heading);
 }
 
+// Focus: one loud, consistent ring on everything interactive.
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--px) solid var(--signal);
+  outline-offset: 4px;
+}
+
+// Reading text: plain sans-serif, comfortable size, short lines.
 article {
   color: var(--ui-text);
-  font-size: 1.02rem;
-  letter-spacing: -0.003em;
+  font-size: 1.0625rem;
   overflow-wrap: break-word;
 
   p,
   li {
-    line-height: 1.7;
+    line-height: 1.65;
   }
 
-  p > strong,
+  :is(p, ul, ol, dl, blockquote) {
+    max-width: 66ch;
+  }
+
   strong {
     color: var(--ui-heading);
-    font-weight: 650;
+    font-weight: 600;
   }
 
   // Long URLs and identifiers wrap instead of widening the page.
@@ -224,82 +207,98 @@ article {
   }
 }
 
+// Pixel font for headings only; never below ~15px, so h5/h6 use the body font.
 h1,
 h2,
 h3,
-h4,
-h5,
-h6 {
+h4 {
   font-family: var(--headerFont);
   color: var(--ui-heading);
-  font-weight: 650;
-  letter-spacing: -0.022em;
+  letter-spacing: 0;
 }
 
-h1 {
-  font-weight: 700;
-  letter-spacing: -0.03em;
+h5,
+h6 {
+  font-family: var(--bodyFont);
+  color: var(--ui-heading);
+  font-weight: 600;
 }
 
 .page article > h1,
 h1.article-title {
-  font-size: 2.4rem;
-  line-height: 1.1;
-  margin-bottom: 0.5rem;
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  font-weight: 700;
+  line-height: 0.95;
+  margin: 0.25rem 0 0.75rem;
   overflow-wrap: break-word;
 }
 
+article h2,
 h2 {
-  font-size: 1.55rem;
-  margin-top: 2.2rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ui-accent-deep);
+  margin-top: 2.5rem;
 }
 
 h3 {
-  font-size: 1.25rem;
+  font-size: 1.4375rem;
+  font-weight: 600;
+  line-height: 1.15;
 }
 
+h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+// A dashed pixel rule.
 hr {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--ui-border-strong), transparent);
+  height: var(--px);
+  border: none;
+  background: repeating-linear-gradient(90deg, var(--ui-line) 0 9px, transparent 9px 15px);
+  opacity: 0.6;
 }
 
 .content-meta {
   color: var(--ui-muted);
+  font-size: 0.95rem;
 }
 
 // ═════════════ 2. Links ═════════════
 a {
   font-weight: 500;
-  color: var(--ui-link);
-  transition:
-    color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    text-decoration-color var(--dur-fast) var(--ease);
+  color: var(--ui-accent-deep);
 
   &:hover {
-    color: var(--ui-link);
+    color: var(--ui-heading);
   }
 
   &.internal,
   &.external {
     background-color: transparent;
     padding: 0;
-    border-radius: 3px;
+    border-radius: 0;
     text-decoration: underline;
     text-decoration-thickness: 2px;
-    text-underline-offset: 0.2em;
-    text-decoration-color: var(--ui-link-line);
+    text-underline-offset: 3px;
+    text-decoration-color: currentColor;
+    transition:
+      color var(--dur-fast) var(--steps),
+      text-decoration-color var(--dur-fast) var(--steps);
 
     &:hover {
-      text-decoration-color: var(--ui-accent);
-      background-color: var(--ui-accent-soft);
+      color: var(--ui-heading);
+      text-decoration-color: var(--signal);
+      background-color: transparent;
     }
 
     &.broken {
       color: var(--ui-muted);
       text-decoration-style: dashed;
       text-decoration-thickness: 1px;
-      text-decoration-color: var(--ui-border-strong);
+      text-decoration-color: var(--ui-faint);
     }
 
     &:has(> img) {
@@ -309,7 +308,7 @@ a {
   }
 
   &.external .external-icon > path {
-    fill: var(--ui-muted);
+    fill: currentColor;
   }
 }
 
@@ -341,48 +340,40 @@ a {
   }
 }
 
-// base.scss gives these `min-width: 100%`; without border-box the side
-// padding added on top made them wider than the screen (sideways scrolling).
-.center,
-.page-header,
-footer {
+// The content column: 800px of content plus padding, centred, the same for
+// header, body and footer. Paragraphs are capped at 66ch (section 1); tables,
+// code and diagrams may use the full width. base.scss gives these
+// `min-width: 100%`, which beat max-width and let the body run full-width;
+// `.page > #quartz-body` is needed to outrank it.
+.page > #quartz-body :is(.center, .page-header, footer) {
   box-sizing: border-box;
-  max-width: 980px; // raise for even wider text, lower for shorter lines
-  padding-left: 2.5rem;
-  padding-right: 2.5rem;
+  width: 100%;
+  min-width: 0;
+  max-width: calc(800px + 2 * var(--s7));
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--s7);
+  padding-right: var(--s7);
 }
 
-// Page entrance: replayed on every SPA navigation by the script in Head.tsx.
+// Page arrival: a short stepped fade, replayed on every SPA navigation by
+// the script in Head.tsx. `backwards`, not `both`, so nothing is held after.
 @keyframes ui-page-enter {
   from {
     opacity: 0;
-    transform: translateY(10px);
-    filter: blur(3px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: none;
   }
 }
 
 .page-enter {
-  // `backwards`, not `both`: a held `transform: none` would override the
-  // explorer's mobile slide-out and other transforms after the animation ends.
-  animation: ui-page-enter var(--dur-slow) var(--ease-out) backwards;
+  animation: ui-page-enter var(--dur) var(--steps) backwards;
 }
 
-.page-header.page-enter {
-  animation-duration: 380ms;
-}
-
-// Thin poppy-red progress bar with a soft glow while a page loads.
 .navigation-progress {
-  height: 2px;
-  background: var(--ui-accent);
-  box-shadow: 0 0 10px var(--ui-accent-soft);
-  border-radius: 0 2px 2px 0;
-  transition: width 0.6s var(--ease-out);
+  height: var(--px);
+  background: var(--signal);
+  box-shadow: none;
+  border-radius: 0;
+  transition: width 0.6s steps(8);
 }
 
 // ═════════════ 4. Left sidebar ═════════════
@@ -400,16 +391,29 @@ footer {
     border-right: none;
     box-shadow: none;
     padding-left: 1.25rem;
-    padding-right: 1.25rem;
+    padding-right: 1.5rem;
   }
 }
 
+// Site title with a section-colour chip in front.
 .page-title {
-  font-size: 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--headerFont);
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.1;
+
+  &::before {
+    content: "";
+    flex: none;
+    width: 10px;
+    height: 10px;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--ui-line);
+  }
 
   a {
     color: var(--ui-heading);
@@ -418,9 +422,9 @@ footer {
   }
 }
 
-// Breadcrumbs: small and quiet
+// Breadcrumbs: small, quiet, body font (too small for the pixel font).
 .breadcrumb-container {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 
   .breadcrumb-element a {
     color: var(--ui-muted);
@@ -429,7 +433,10 @@ footer {
 
     &:hover {
       color: var(--ui-heading);
-      background: none;
+      text-decoration: underline;
+      text-decoration-color: var(--signal);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
     }
   }
 
@@ -438,51 +445,58 @@ footer {
   }
 }
 
-// ═════════════ 5. Toolbar: search pill + round icon buttons ═════════════
+// ═════════════ 5. Toolbar: search + theme buttons (plates) ═════════════
 .search {
   margin: 0;
 }
 
-%ui-round-button {
-  border: 1px solid var(--ui-border);
-  background: var(--ui-sheen), var(--ui-surface);
-  box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
-  transition:
-    transform var(--dur) var(--spring),
-    box-shadow var(--dur) var(--ease),
-    border-color var(--dur) var(--ease);
+%ui-button {
+  border: none;
+  border-radius: 0;
+  background: var(--ui-card);
+  box-shadow: var(--ui-plate);
 
   &:hover {
-    border-color: var(--ui-border-strong);
-    box-shadow: var(--ui-shadow), var(--ui-highlight);
+    background: var(--ui-invert-bg);
+    box-shadow: var(--ui-frame);
+  }
+
+  &:active {
+    transform: translateY(2px);
   }
 }
 
 .search-button {
-  @extend %ui-round-button;
+  @extend %ui-button;
   height: 2.25rem;
-  border-radius: 999px;
   color: var(--ui-muted);
 
   & > p {
     color: var(--ui-faint);
-    font-weight: 450;
+    font-family: var(--headerFont);
+    font-size: 1rem;
+    font-weight: 500;
   }
 
   svg {
     stroke: var(--ui-muted);
   }
 
-  &:active {
-    transform: scale(0.97);
+  &:hover {
+    & > p {
+      color: var(--ui-invert-text);
+    }
+
+    svg {
+      stroke: var(--ui-invert-text);
+    }
   }
 }
 
 .darkmode {
-  @extend %ui-round-button;
+  @extend %ui-button;
   width: 2.25rem;
   height: 2.25rem;
-  border-radius: 50%;
 
   svg {
     width: 17px;
@@ -491,92 +505,45 @@ footer {
     left: calc(50% - 8.5px);
     fill: var(--ui-muted);
     stroke: var(--ui-muted);
-    transition:
-      opacity var(--dur) var(--ease),
-      transform var(--dur-slow) var(--spring);
   }
 
   &:hover svg {
-    fill: var(--ui-heading);
-    stroke: var(--ui-heading);
-  }
-
-  &:active {
-    transform: scale(0.92);
+    fill: var(--ui-invert-text);
+    stroke: var(--ui-invert-text);
   }
 }
 
-// Sun/moon icon spins in when the theme flips.
-@keyframes ui-icon-in {
-  from {
-    opacity: 0;
-    transform: rotate(-90deg) scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.darkmode svg {
-  animation: ui-icon-in var(--dur-slow) var(--spring);
-}
-
-// ═════════════ 6. Search overlay (glass sheet) ═════════════
-@keyframes ui-sheet-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
+// ═════════════ 6. Search overlay ═════════════
 @keyframes ui-fade-in {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
 // The search plugin's own selectors (`.search > .search-container >
 // .search-space > …`) are more specific than plain class selectors and load
-// after this stylesheet, so they used to override this whole section. Every
-// rule here repeats that path with `html body` in front so it wins.
+// after this stylesheet, so every rule here repeats that path with `html
+// body` in front so it wins.
 html body .search > .search-container {
   background: var(--ui-scrim);
-  @include glass-blur(blur(12px) saturate(140%));
+  @include backdrop(none);
 
   &.active {
-    animation: ui-fade-in var(--dur) var(--ease) both;
-
-    & > .search-space {
-      animation: ui-sheet-in var(--dur-slow) var(--ease-out) both;
-    }
+    animation: ui-fade-in 200ms steps(4) both;
   }
 
   & > .search-space {
     max-width: 760px;
 
-    // The search box and the results card. Radius, shadow, blur and gap are
-    // custom properties so the mobile sheet (section 13) can change them
-    // without out-ranking this selector.
+    // The search box and the results card: plates. The gap is a custom
+    // property so the mobile sheet (section 13) can change it.
     & > *:not(.ghost-text):not(.tag-suggestions) {
-      border: 1px solid var(--ui-border);
-      border-radius: var(--sheet-radius, var(--radius-lg));
-      background: var(--ui-sheen), var(--ui-glass-strong);
-      background-size:
-        100% 80px,
-        auto;
-      background-repeat: no-repeat;
-      @include glass-blur(var(--sheet-blur, blur(30px) saturate(180%)));
-      box-shadow: var(--sheet-shadow, var(--ui-shadow-lg)), var(--ui-highlight);
+      border: none;
+      border-radius: 0;
+      background: var(--ui-card);
+      box-shadow: var(--ui-plate);
       overflow: hidden;
-      margin-bottom: var(--sheet-item-gap, 1rem);
+      margin-bottom: var(--sheet-item-gap, 1.25rem);
     }
 
     & > input {
@@ -590,8 +557,8 @@ html body .search > .search-container {
       }
 
       &:focus {
-        outline: none;
-        border-color: var(--ui-border-strong);
+        outline: var(--px) solid var(--signal);
+        outline-offset: 4px;
       }
     }
 
@@ -606,13 +573,11 @@ html body .search > .search-container {
 
     & > .search-layout {
       & > .results-container .result-card {
-        border-bottom: 1px solid var(--ui-border);
+        border-bottom: 2px solid var(--ui-rule);
         color: var(--ui-text);
-        transition: background-color var(--dur-fast) var(--ease);
 
         & > h3 {
-          color: var(--ui-heading);
-          letter-spacing: -0.01em;
+          color: var(--ui-accent-deep);
         }
 
         & > p {
@@ -627,9 +592,9 @@ html body .search > .search-container {
       }
 
       .highlight {
-        background: var(--ui-accent-soft);
+        background: var(--ui-selection);
         color: var(--ui-heading);
-        border-radius: 3px;
+        border-radius: 0;
       }
     }
   }
@@ -650,11 +615,10 @@ html body .search > .search-container {
 
   .title-button h2,
   h2 {
-    font-size: 0.72rem;
+    font-family: var(--headerFont);
+    font-size: 1rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ui-faint);
+    color: var(--ui-muted);
     margin: 0;
   }
 
@@ -668,17 +632,12 @@ html body .search > .search-container {
     margin: 0;
   }
 
-  // Nested levels: one consistent indent + faint guide line
+  // Nested levels: one consistent indent + a dashed ink guide line.
   ul ul,
   .folder-outer > ul {
     margin-left: 0.6rem;
     padding-left: 0.6rem;
-    border-left: 1px solid var(--ui-border);
-  }
-
-  // Folder expand/collapse: smooth height via grid rows.
-  .folder-outer {
-    transition: grid-template-rows var(--dur) var(--ease-out);
+    border-left: 2px dashed var(--ui-rule);
   }
 
   .folder-container {
@@ -688,9 +647,7 @@ html body .search > .search-container {
     // padding too, so anywhere on the highlighted row toggles the folder.
     position: relative;
     padding: 0.22rem 0.4rem;
-    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background-color var(--dur-fast) var(--ease);
 
     & > div {
       flex: 1 1 auto;
@@ -704,45 +661,38 @@ html body .search > .search-container {
         content: "";
         position: absolute;
         inset: 0;
-        border-radius: inherit;
       }
     }
 
     .folder-title,
     .folder-button span,
     div > a {
+      font-family: var(--headerFont);
       color: var(--ui-heading);
       font-weight: 600;
-      font-size: 0.93rem;
+      font-size: 1.05rem;
       text-decoration: none;
       background: none;
     }
 
     .folder-icon {
-      color: var(--ui-faint);
-      transition:
-        transform var(--dur) var(--spring),
-        color var(--dur-fast) var(--ease);
+      color: var(--ui-muted);
     }
 
     &:hover {
       background-color: var(--ui-hover);
-
-      .folder-icon {
-        color: var(--ui-muted);
-      }
     }
   }
 
   // Note rows: the link is the whole row, so the click area matches the
-  // hover highlight.
+  // hover highlight. Body font: these are titles you read.
   li > a {
     display: block;
     width: 100%;
     box-sizing: border-box;
     padding: 0.24rem 0.55rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.91rem;
+    border-radius: 0;
+    font-size: 0.95rem;
     font-weight: 400;
     color: var(--ui-muted);
     opacity: 1;
@@ -750,29 +700,17 @@ html body .search > .search-container {
     overflow: hidden;
     text-overflow: ellipsis;
     text-decoration: none;
-    transition:
-      background-color var(--dur-fast) var(--ease),
-      color var(--dur-fast) var(--ease),
-      transform var(--dur) var(--spring);
 
     &:hover {
       background-color: var(--ui-hover);
       color: var(--ui-heading);
-      transform: translateX(2px);
     }
 
-    // Current page: a glossy pill (raven in light mode, poppy in dark)
+    // Current page: inverted, like a pressed plate.
     &.active {
-      background: var(--ui-sheen), var(--ui-pill-bg);
-      background-size:
-        100% 100%,
-        auto;
-      color: var(--ui-pill-text);
-      font-weight: 550;
-      box-shadow:
-        var(--ui-shadow-sm),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
-      transform: none;
+      background: var(--ui-invert-bg);
+      color: var(--ui-invert-text);
+      font-weight: 600;
     }
   }
 }
@@ -790,12 +728,11 @@ html body .search > .search-container {
     padding-top: var(--mobile-bar-h);
   }
 
-  // Top bar: [menu] [title ……] [search] [theme], frosted glass, fixed to the
-  // top. (It used to be `sticky`, but a sticky grid item can only stick
-  // within its own grid cell, which is exactly the bar's height, so it
-  // scrolled away.) The glass lives on ::before: a backdrop-filter on the
-  // bar itself would trap the search overlay and the drawer (both
-  // positioned children) inside the bar.
+  // Top bar: [menu] [title ……] [search] [theme], fixed to the top. (It used
+  // to be `sticky`, but a sticky grid item can only stick within its own grid
+  // cell, which is exactly the bar's height, so it scrolled away.) The
+  // background lives on ::before so the search overlay and drawer (both
+  // positioned children) aren't affected by it.
   html .page > #quartz-body .sidebar.left,
   html .page > #quartz-body .sidebar.left:has(.explorer) {
     position: fixed;
@@ -807,7 +744,7 @@ html body .search > .search-container {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
     margin: 0;
     padding: calc(0.6rem + env(safe-area-inset-top)) 1rem 0.6rem;
     background: transparent;
@@ -818,22 +755,22 @@ html body .search > .search-container {
       position: absolute;
       inset: 0;
       z-index: -1;
-      background: var(--ui-sheen), var(--ui-glass);
-      @include glass-blur(saturate(180%) blur(20px));
-      border-bottom: 1px solid var(--ui-border);
-      // Own compositor layer, so the blur doesn't repaint and lag while the
-      // page scrolls underneath.
-      transform: translateZ(0);
+      background: var(--ui-sidebar);
+      border-bottom: var(--px) solid var(--ui-line);
     }
 
     // Title takes the free space and truncates instead of pushing buttons.
     .page-title {
       flex: 1 1 auto;
       min-width: 0;
-      font-size: 1.15rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 1.25rem;
+
+      a {
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
 
     .spacer,
@@ -841,23 +778,22 @@ html body .search > .search-container {
       display: none;
     }
 
-    // Toolbar: fixed-size round buttons. The wrappers carry inline
+    // Toolbar: fixed-size square buttons. The wrappers carry inline
     // flex-grow from the layout config, hence !important.
     & > .flex-component {
       flex: 0 0 auto;
-      gap: 0.4rem !important;
+      gap: 0.6rem !important;
 
       & > div {
         flex: 0 0 auto !important;
       }
     }
 
-    // Search collapses to an icon-only round button.
+    // Search collapses to an icon-only button.
     .search-button {
       width: 2.25rem;
       padding: 0;
       justify-content: center;
-      border-radius: 50%;
 
       & > p {
         display: none;
@@ -873,21 +809,20 @@ html body .search > .search-container {
     order: -1;
     flex: 0 0 auto;
     margin: 0;
-    overflow: visible; // the plugin's `hidden` clipped the button's shadow
+    overflow: visible; // the plugin's `hidden` clipped the button's border
   }
 
-  // Menu button: same round style as the toolbar (Sass can't @extend inside a
-  // media query, so the look is repeated); stays above the drawer so it
-  // doubles as the close button.
+  // Menu button: same plate as the toolbar (Sass can't @extend inside a media
+  // query, so the look is repeated); stays above the drawer so it doubles as
+  // the close button.
   .explorer .mobile-explorer {
-    border: 1px solid var(--ui-border);
-    background: var(--ui-sheen), var(--ui-surface);
-    box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
-    transition: transform var(--dur) var(--spring);
+    border: none;
+    border-radius: 0;
+    background: var(--ui-card);
+    box-shadow: var(--ui-plate);
     width: 2.25rem;
     height: 2.25rem;
     padding: 0;
-    border-radius: 50%;
     align-items: center;
     justify-content: center;
     position: relative;
@@ -900,13 +835,12 @@ html body .search > .search-container {
     }
 
     &:active {
-      transform: scale(0.92);
+      transform: translateY(2px);
     }
   }
 
-  // Drawer: a frosted, tinted sheet over the page. The plugin normally slides
-  // the page off-screen while it's open; keep it in place so the glass has
-  // something to blur, and the blur + tint turns it into a soft haze.
+  // Drawer: a solid parchment sheet over the page. The plugin normally slides
+  // the page off-screen while it's open; keep it in place under the sheet.
   // `.page > #quartz-body` outranks the plugin's rules, which load later.
   html .page > #quartz-body.lock-scroll > :not(.sidebar.left:has(.explorer)) {
     transform: none;
@@ -924,15 +858,11 @@ html body .search > .search-container {
     display: flex;
     flex-direction: column;
     padding: calc(4.25rem + env(safe-area-inset-top)) 0 0;
-    background-color: var(--ui-drawer-tint);
-    background-image: var(--ui-sheen);
-    background-size: 100% 160px;
-    background-repeat: no-repeat;
-    @include glass-blur(blur(40px) saturate(160%));
-    box-shadow: var(--ui-highlight);
+    background: var(--ui-sidebar);
+    @include backdrop(none);
     transition:
-      transform var(--dur-slow) var(--ease-out),
-      visibility var(--dur-slow) var(--ease-out);
+      transform var(--dur) var(--steps),
+      visibility var(--dur) var(--steps);
 
     // The list scrolls inside the sheet; the page underneath stays put.
     & > .explorer-ul {
@@ -944,10 +874,10 @@ html body .search > .search-container {
       padding: 0.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
     }
 
-    // Bigger tap targets (~44px, Apple's guideline).
+    // Bigger tap targets (~44px).
     li > a {
       padding: 0.6rem 0.75rem;
-      font-size: 1rem;
+      font-size: 1.0625rem;
       white-space: normal;
     }
 
@@ -957,7 +887,7 @@ html body .search > .search-container {
       .folder-title,
       .folder-button span,
       div > a {
-        font-size: 1.02rem;
+        font-size: 1.125rem;
       }
     }
 
@@ -973,7 +903,7 @@ html body .search > .search-container {
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.5rem;
   background: none !important;
   padding: 0;
 }
@@ -986,46 +916,36 @@ html body .search > .search-container {
 a.tag-link {
   display: inline-block;
   width: auto;
-  background-color: var(--ui-accent-soft) !important;
+  background-color: var(--ui-tint) !important;
   color: var(--ui-heading);
-  border: 1px solid var(--ui-border);
-  border-radius: 999px;
-  padding: 0.08rem 0.65rem;
-  font-size: 0.8rem;
+  border: 2px solid var(--ui-line);
+  border-radius: 0;
+  padding: 0 0.5rem 0.05rem;
+  font-family: var(--headerFont);
+  font-size: 0.9375rem;
   font-weight: 500;
   text-decoration: none;
-  transition:
-    background-color var(--dur-fast) var(--ease),
-    color var(--dur-fast) var(--ease),
-    transform var(--dur) var(--spring);
 
   &:hover {
-    background-color: var(--ui-accent) !important;
-    color: var(--ui-on-accent);
-    transform: translateY(-1px);
+    background-color: var(--ui-invert-bg) !important;
+    color: var(--ui-invert-text);
   }
 }
 
-// ═════════════ 10. Cards: tables, code, mermaid, callouts ═════════════
-// One shared "glossy card" look: light surface, hairline border, top sheen,
-// soft shadow.
-%ui-card {
-  border: 1px solid var(--ui-border);
-  border-radius: var(--radius);
-  background: var(--ui-sheen), var(--ui-surface);
-  background-size:
-    100% 48px,
-    auto;
-  background-repeat: no-repeat;
-  box-shadow: var(--ui-shadow-sm), var(--ui-highlight);
+// ═════════════ 10. Panels: tables, code, mermaid, callouts ═════════════
+%ui-panel {
+  border: none;
+  border-radius: 0;
+  background: var(--ui-surface);
+  box-shadow: var(--ui-plate);
 }
 
-// Tables: the box hugs the table and scrolls sideways when wide.
+// Tables: the plate hugs the table and scrolls sideways when wide.
 .table-container {
-  @extend %ui-card;
+  @extend %ui-panel;
   width: fit-content;
-  max-width: 100%;
-  margin: 1.4rem 0;
+  max-width: calc(100% - 2 * var(--px)); // room for the side borders
+  margin: 1.6rem var(--px) 1.8rem;
   overflow-x: auto;
 
   & > table {
@@ -1035,7 +955,7 @@ a.tag-link {
     border-radius: 0;
     border-collapse: collapse;
     background-color: transparent;
-    font-size: 0.94rem;
+    font-size: 0.97rem;
 
     & > * {
       line-height: 1.5;
@@ -1044,23 +964,23 @@ a.tag-link {
     tr {
       border: none;
       background-color: transparent;
-      transition: background-color var(--dur-fast) var(--ease);
     }
 
     th,
     td {
       padding: 0.55rem 0.95rem;
       border: none;
-      border-bottom: 1px solid var(--ui-border);
+      border-bottom: 2px solid var(--ui-rule);
       vertical-align: top;
     }
 
+    // Body font: base.scss sets thead in the header font, too small for pixels.
     th {
+      font-family: var(--bodyFont);
       background-color: var(--ui-surface-2);
+      border-bottom: var(--px) solid var(--ui-line);
       color: var(--ui-heading);
       font-weight: 600;
-      font-size: 0.85rem;
-      letter-spacing: 0.01em;
     }
 
     tbody tr:hover {
@@ -1075,36 +995,30 @@ a.tag-link {
 
 // Code blocks
 figure[data-rehype-pretty-code-figure] {
-  margin: 1.4rem 0;
+  margin: 1.6rem var(--px) 1.8rem;
   border: none;
   border-radius: 0;
   background: none;
 
   & > [data-rehype-pretty-code-title] {
     width: auto;
-    margin: 0;
-    padding: 0.5rem 0.95rem;
-    border: 1px solid var(--ui-border);
-    border-bottom: none;
-    border-radius: var(--radius) var(--radius) 0 0;
-    background: var(--ui-sheen), var(--ui-surface-2);
-    color: var(--ui-muted);
+    margin: 0 0 var(--px);
+    padding: 0.35rem 0.95rem;
+    border: none;
+    border-radius: 0;
+    background: var(--ui-invert-bg);
+    color: var(--ui-invert-text);
+    box-shadow: var(--ui-frame);
     font-family: var(--codeFont);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 500;
-
-    & + pre {
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-    }
   }
 }
 
 pre:has(> code:not(.mermaid)) {
-  @extend %ui-card;
-  margin: 1.4rem 0;
+  @extend %ui-panel;
+  margin: 1.6rem var(--px) 1.8rem;
   padding: 0;
-  background: var(--ui-surface-2);
 
   figure > & {
     margin: 0;
@@ -1115,17 +1029,17 @@ pre:has(> code:not(.mermaid)) {
     border: none;
     border-radius: 0;
     background: none;
-    font-size: 0.85rem;
-    line-height: 1.65;
+    font-size: 0.9rem;
+    line-height: 1.6;
 
     & > [data-line] {
       padding: 0 1rem 0 0.75rem;
-      border-left: 2px solid transparent;
+      border-left: var(--px) solid transparent;
       background: none;
 
       &[data-highlighted-line] {
-        background-color: var(--ui-accent-soft);
-        border-left-color: var(--ui-accent);
+        background-color: var(--ui-selection);
+        border-left-color: var(--signal);
       }
 
       &::before {
@@ -1135,21 +1049,25 @@ pre:has(> code:not(.mermaid)) {
   }
 }
 
-// Inline code: a soft chip
+// Inline code: a flat square chip
 :not(pre) > code {
-  padding: 0.12em 0.4em;
-  border: 1px solid var(--ui-border);
-  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--ui-rule);
+  border-radius: 0;
   background: var(--ui-surface-2);
   color: var(--ui-heading);
-  font-size: 0.86em;
+  font-size: 0.88em;
 }
 
-// Mermaid: same card; wide diagrams scroll sideways inside it.
+// Mermaid: a plate; wide diagrams scroll sideways inside it. Mermaid takes
+// its colours from the config palette (--light, --darkgray, …); the rules
+// below only restyle default nodes and edges. A diagram's own `style` /
+// `classDef` colours are inline `!important` and still win.
 pre:has(> code.mermaid) {
-  @extend %ui-card;
-  margin: 1.4rem 0;
-  padding: 1rem;
+  @extend %ui-panel;
+  background: var(--ui-page);
+  margin: 1.6rem var(--px) 1.8rem;
+  padding: 1.25rem;
   overflow-x: auto;
 
   & > code.mermaid {
@@ -1158,6 +1076,7 @@ pre:has(> code.mermaid) {
     border: none;
     background: none;
     text-align: center;
+    font-family: var(--codeFont);
   }
 
   // Mermaid scopes its own styles to the svg's id, hence !important.
@@ -1167,92 +1086,176 @@ pre:has(> code.mermaid) {
     .node circle,
     .node ellipse,
     .node path {
-      fill: var(--ui-surface-2) !important;
-      stroke: var(--ui-border-strong) !important;
-      stroke-width: 1px !important;
+      fill: var(--ui-surface) !important;
+      stroke: var(--ui-heading) !important;
+      stroke-width: 2px !important;
     }
 
-    .nodeLabel,
-    .label,
-    .edgeLabel {
-      color: var(--ui-heading) !important;
-      fill: var(--ui-heading) !important;
+    .cluster rect {
+      fill: var(--ui-hover) !important;
+      stroke: var(--ui-faint) !important;
+      stroke-dasharray: 6 4;
+    }
+
+    // Label colours come from mermaid (theme, or a diagram's own `classDef …
+    // color:`); never force them here. base.scss colours every <p> directly,
+    // which stopped the label's colour reaching the words, so inherit it.
+    foreignObject :is(p, li, a) {
+      color: inherit;
+    }
+
+    // Subgraph titles: mermaid's light theme derives a pale brown (2.6:1).
+    .cluster-label :is(span, div) {
+      color: var(--ui-text) !important;
+    }
+
+    .cluster-label text {
+      fill: var(--ui-text) !important;
     }
 
     .flowchart-link,
-    .edgePath .path {
-      stroke: var(--ui-faint) !important;
+    .edgePath .path,
+    .relation,
+    .messageLine0,
+    .messageLine1 {
+      stroke: var(--ui-muted) !important;
     }
 
     marker path,
-    .arrowheadPath {
-      fill: var(--ui-faint) !important;
-      stroke: var(--ui-faint) !important;
+    .arrowheadPath,
+    .arrowhead {
+      fill: var(--ui-muted) !important;
+      stroke: var(--ui-muted) !important;
     }
 
     .edgeLabel,
     .edgeLabel p,
     .labelBkg {
-      background-color: var(--ui-surface) !important;
+      background-color: var(--ui-page) !important;
     }
 
     .edgeLabel rect {
-      fill: var(--ui-surface) !important;
+      fill: var(--ui-page) !important;
     }
   }
 }
 
-// Callouts: glossy cards with a poppy-red edge and icon; the icon tells types apart.
+// Callouts: plates; the icon tells the types apart.
 .callout[data-callout] {
-  --color: rgb(var(--ui-callout-rgb));
-  --border: var(--ui-border);
+  --color: var(--ui-accent-deep);
+  --border: var(--parchment-lo);
   --bg: var(--ui-surface);
-  @extend %ui-card;
+  @extend %ui-panel;
+  // The plate, with its four outline shadows in beige instead of ink.
+  box-shadow:
+    inset 0 var(--px) 0 0 var(--ui-plate-hi),
+    inset 0 calc(var(--px) * -1) 0 0 var(--ui-plate-lo),
+    calc(var(--px) * -1) 0 0 0 var(--parchment-lo),
+    var(--px) 0 0 0 var(--parchment-lo),
+    0 calc(var(--px) * -1) 0 0 var(--parchment-lo),
+    0 var(--px) 0 0 var(--parchment-lo),
+    0 calc(var(--px) * 2.5) 0 0 var(--ui-drop);
+  margin: 1.6rem var(--px) 1.8rem;
   padding: 0 1.1rem;
-  border-left: 3px solid rgb(var(--ui-callout-rgb));
-
-  & > .callout-content {
-    transition: grid-template-rows var(--dur) var(--ease-out);
-  }
 
   .callout-title {
-    color: var(--ui-heading);
+    color: var(--ui-accent-deep);
+    font-family: var(--headerFont);
+    font-size: 1.0625rem;
     font-weight: 600;
   }
 
   .callout-icon,
   .fold-callout-icon {
-    background-color: rgb(var(--ui-callout-rgb));
-    transition: transform var(--dur) var(--spring);
+    background-color: var(--ui-accent-deep);
   }
 }
 
-// Blockquotes
+// Blockquotes: a dashed ink rule, like the timeline in the design.
 blockquote {
   margin: 1.4rem 0;
-  padding: 0.2rem 1.1rem;
-  border-left: 3px solid var(--ui-accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--ui-hover);
+  padding: 0.1rem 0 0.1rem 1.1rem;
+  border-left: var(--px) dashed var(--ui-line);
+  border-radius: 0;
+  background: none;
   color: var(--ui-muted);
 }
 
 // Transclusions (embedded notes)
 .transclude {
-  border-left: 2px solid var(--ui-accent);
+  border-left: var(--px) solid var(--accent);
   padding-left: 1rem;
 }
 
 // Highlights (==text==)
 .text-highlight {
-  background-color: var(--ui-accent-soft);
+  background-color: var(--textHighlight);
   color: var(--ui-heading);
 }
 
-// Images: rounded with a soft lift
+// Images: a hard ink frame, no rounding.
 article img {
-  border-radius: var(--radius);
-  box-shadow: var(--ui-shadow);
+  border-radius: 0;
+  box-shadow: var(--ui-frame);
+  margin: var(--px);
+  max-width: calc(100% - 2 * var(--px));
+}
+
+// SVGs are often black lines on a transparent background: give them a light
+// sheet in both themes so they stay legible in dark mode.
+article img[src$=".svg" i] {
+  background: var(--parchment-hi);
+  padding: var(--s3);
+  box-sizing: border-box;
+}
+
+// Diagrams drawn inline in notes (<svg> in the markdown). Every other svg in
+// an article is an icon in a link or button, KaTeX or mermaid, hence the
+// exclusions (`[xmlns]` can't be used: the HTML parser namespaces it). They
+// hard-code colours made for a white page, so they get the same light sheet
+// in both themes, with ink as currentColor. base.scss paints every <text>
+// with --darkgray (light in dark mode), so that is pinned to ink here too.
+article svg:not(:is(a, button, .katex, .mermaid, svg) svg) {
+  --darkgray: var(--ink);
+  color: var(--ink);
+  background: var(--parchment-hi);
+  box-shadow: var(--ui-frame);
+  margin: var(--px);
+  max-width: calc(100% - 2 * var(--px));
+
+  // Faded labels (K-map cell numbers) were 3.6:1; softer ink instead.
+  text[opacity] {
+    opacity: 1;
+    fill: var(--ink-soft);
+  }
+
+  // Mark colours under 3:1 on the sheet, darkened to the same hue.
+  [stroke="#9ca3af" i] {
+    stroke: #6b7280;
+  }
+
+  [stroke="#f59e0b" i] {
+    stroke: #b45309;
+  }
+
+  [fill="#f59e0b" i] {
+    fill: #b45309;
+  }
+
+  [stroke="#c68a00" i] {
+    stroke: #8a6100;
+  }
+
+  [fill="#c68a00" i] {
+    fill: #8a6100;
+  }
+}
+
+// KaTeX display maths: scroll sideways instead of widening the page.
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
 }
 
 // Embeds never wider than the column
@@ -1260,26 +1263,22 @@ article :is(iframe, video, embed, object) {
   max-width: 100%;
 }
 
-// Checkboxes: iOS-style rounded squares, filled with the pill colour when ticked
+// Checkboxes: square, ink-ringed, inverted when ticked.
 input[type="checkbox"] {
-  border: 1.5px solid var(--ui-border-strong);
-  border-radius: 5px;
-  background-color: var(--ui-surface);
-  transition:
-    background-color var(--dur-fast) var(--ease),
-    border-color var(--dur-fast) var(--ease),
-    transform var(--dur) var(--spring);
+  border: 2px solid var(--ui-line);
+  border-radius: 0;
+  background-color: var(--ui-card);
 
   &:active {
-    transform: translateY(2px) scale(0.88);
+    transform: translateY(2px);
   }
 
   &:checked {
-    border-color: var(--ui-pill-bg);
-    background-color: var(--ui-pill-bg);
+    border-color: var(--ui-invert-bg);
+    background-color: var(--ui-invert-bg);
 
     &::after {
-      border-color: var(--ui-pill-text);
+      border-color: var(--ui-invert-text);
     }
   }
 }
@@ -1287,36 +1286,23 @@ input[type="checkbox"] {
 // ═════════════ 11. Popovers (link previews) ═════════════
 .popover {
   transition:
-    opacity var(--dur) var(--ease),
-    visibility var(--dur) var(--ease);
+    opacity 200ms steps(4),
+    visibility 200ms steps(4);
 
   & > .popover-inner {
-    border: 1px solid var(--ui-border);
-    border-radius: var(--radius-lg);
-    background: var(--ui-sheen), var(--ui-glass-strong);
-    background-size:
-      100% 80px,
-      auto;
-    background-repeat: no-repeat;
-    @include glass-blur(blur(30px) saturate(180%));
-    box-shadow: var(--ui-shadow-lg), var(--ui-highlight);
+    border: none;
+    border-radius: 0;
+    background: var(--ui-card);
+    box-shadow: var(--ui-plate);
     font-family: var(--bodyFont);
     color: var(--ui-text);
-    transform: translateY(4px) scale(0.97);
-    transform-origin: top left;
-    transition: transform var(--dur-slow) var(--spring);
-  }
-
-  &.active-popover > .popover-inner,
-  &:hover > .popover-inner {
-    transform: none;
   }
 }
 
 // ═════════════ 12. Scrollbars ═════════════
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--ui-border-strong) transparent;
+  scrollbar-color: var(--ui-faint) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -1325,9 +1311,9 @@ input[type="checkbox"] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--ui-border-strong);
-  border: 3px solid transparent;
-  border-radius: 999px;
+  background: var(--ui-faint);
+  border: 2px solid transparent;
+  border-radius: 0;
   background-clip: padding-box;
 }
 
@@ -1337,9 +1323,7 @@ input[type="checkbox"] {
 
 // ═════════════ 13. Mobile content ═════════════
 @media all and ($mobile) {
-  .center,
-  .page-header,
-  footer {
+  .page > #quartz-body :is(.center, .page-header, footer) {
     padding-left: 0;
     padding-right: 0;
   }
@@ -1350,27 +1334,31 @@ input[type="checkbox"] {
 
   .page article > h1,
   h1.article-title {
-    font-size: 1.9rem;
+    font-size: 2.25rem;
   }
 
+  article h2,
   h2 {
-    font-size: 1.35rem;
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
   }
 
   pre:has(> code:not(.mermaid)) > code {
-    font-size: 0.8rem;
+    font-size: 0.84rem;
   }
 
   .table-container > table {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
   }
 
   // Search: a full-screen, app-style sheet.
   //   [ search field ………………… ] Cancel
   //   ┌ results (only this scrolls) ┐
   //   └─────────────────────────────┘   ← ends above the keyboard
-  // - The sheet is the same heavy frosted glass as the menu drawer, so the
-  //   page underneath effectively disappears.
+  // - The sheet is solid page colour, so the page underneath disappears.
   // - The sheet always covers the whole screen, keyboard area included; only
   //   its contents are inset to the visible area (padding from --vv-top and
   //   --kb, set by uiBehaviour.ts). If iOS pans the view while the keyboard
@@ -1384,15 +1372,12 @@ input[type="checkbox"] {
   //   dismisses the keyboard when you start scrolling results.
   // `html body` outranks the plugin's selectors, which load after this file.
   html body .search > .search-container {
-    --sheet-gap: 0.75rem;
+    --sheet-gap: 0.9rem;
     --sheet-top: calc(var(--sheet-gap) + env(safe-area-inset-top));
     --field-h: 2.75rem;
     --cancel-w: 4.75rem;
     // Read by the search box / results card rule in section 6.
-    --sheet-item-gap: var(--sheet-gap);
-    --sheet-radius: 14px;
-    --sheet-shadow: var(--ui-shadow-sm);
-    --sheet-blur: none; // the sheet itself is blurred; don't blur twice
+    --sheet-item-gap: calc(var(--sheet-gap) + var(--px));
     box-sizing: border-box;
     top: 0;
     bottom: 0;
@@ -1404,8 +1389,7 @@ input[type="checkbox"] {
     // Keyboard up: stop above it. Down: clear the home indicator.
     padding-bottom: max(var(--kb, 0px), env(safe-area-inset-bottom));
     overflow: hidden;
-    background: var(--ui-drawer-tint);
-    @include glass-blur(blur(40px) saturate(160%));
+    background: var(--ui-page);
     touch-action: none;
 
     & > .search-space {
@@ -1433,7 +1417,7 @@ input[type="checkbox"] {
         height: var(--field-h);
         padding: 0 0.9rem;
         font-size: 17px;
-        line-height: calc(var(--field-h) - 2px);
+        line-height: var(--field-h);
       }
 
       & > .search-layout {
@@ -1477,15 +1461,14 @@ input[type="checkbox"] {
       padding: 0;
       border: 0;
       background: none;
-      color: var(--ui-link);
-      font-family: var(--bodyFont);
-      font-size: 17px;
-      font-weight: 500;
+      color: var(--ui-accent-deep);
+      font-family: var(--headerFont);
+      font-size: 1.125rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: opacity var(--dur-fast) var(--ease);
 
       &:active {
-        opacity: 0.45;
+        transform: translateY(2px);
       }
     }
   }
@@ -1598,12 +1581,20 @@ html:has(.search-container.active) {
 }
 
 // ═════════════ 14. Reduced motion ═════════════
+// Transitions off, not shortened: a non-zero duration on `*` makes every
+// property change animate (transition-property defaults to `all`), and
+// mermaid then measures its labels mid-transition and draws a giant diagram.
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+
+  :active {
+    transform: none !important;
   }
 }
