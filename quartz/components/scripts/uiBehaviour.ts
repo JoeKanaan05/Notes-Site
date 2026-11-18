@@ -141,7 +141,7 @@ export const uiBehaviourScript = `
   // 3. Home page archive (styles in custom.scss, section 15): every note as a file
   //    row under its folder's divider; hovering or focusing a file pulls it up into
   //    the card. Data: the slim content index (\`fetchData\`, renderPage.tsx); the
-  //    card's text is the note's meta description, fetched on first hover.
+  //    card's text is the note's headings, read from its page on first hover.
   const descriptions = new Map()
   const describe = (href) => {
     if (!descriptions.has(href)) {
@@ -151,9 +151,14 @@ export const uiBehaviourScript = `
           .then((res) => res.text())
           .then((html) => {
             const doc = new DOMParser().parseFromString(html, "text/html")
-            return doc.querySelector('meta[name="description"]')?.content ?? ""
+            // Top-level sections (h2); notes without any fall back to their h3s.
+            const article = doc.querySelector("article")
+            if (!article) return []
+            let heads = article.querySelectorAll("h2[id]")
+            if (!heads.length) heads = article.querySelectorAll("h3[id]")
+            return [...heads].map((h) => h.textContent.trim()).filter(Boolean)
           })
-          .catch(() => ""),
+          .catch(() => []),
       )
     }
     return descriptions.get(href)
@@ -256,8 +261,11 @@ export const uiBehaviourScript = `
       // A short wait, so sweeping the pointer down the stack doesn't fetch every page.
       setTimeout(() => {
         if (current !== row) return
-        describe(row.href).then((description) => {
-          if (current === row) text.textContent = description || "No description."
+        describe(row.href).then((heads) => {
+          if (current !== row) return
+          // One span per heading; custom.scss alternates bold / regular for legibility.
+          if (heads.length) text.replaceChildren(...heads.map((h) => make("span", "", h)))
+          else text.textContent = "No headings."
         })
       }, 120)
     }

@@ -1772,6 +1772,16 @@ html:has(.search-container.active) {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
+
+  // Headings alternate bold / regular so neighbours are easy to tell apart.
+  & > span:nth-child(odd) {
+    font-weight: 700;
+  }
+  & > span + span::before {
+    content: "  ·  ";
+    white-space: pre;
+    font-weight: 400;
+  }
 }
 
 .archive-card-foot {
