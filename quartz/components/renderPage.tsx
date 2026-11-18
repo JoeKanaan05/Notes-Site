@@ -81,12 +81,20 @@ export function pageResources(
   const contentIndexScript = `
 const fetchData = fetch("${slimContentIndexPath}").then(data => data.json()).then(content => ({ content }))
 ;(() => {
+  // resolved now: this script survives SPA navigation, after which the relative path would point elsewhere
+  const fullIndexUrl = new URL("${contentIndexPath}", location.href).href
   let fullIndexRequested = false
   const loadFullIndex = () => {
     if (fullIndexRequested) return
     fullIndexRequested = true
-    Promise.all([fetchData, fetch("${contentIndexPath}").then(data => data.json())])
+    Promise.all([fetchData, fetch(fullIndexUrl).then(data => data.json())])
       .then(([index, full]) => {
+        // The search plugin's encoder calls .toLowerCase() on every indexed field, but FlexSearch
+        // passes the tags field as an array, which throws and stops indexing at the first tagged note.
+        // shortcut: shim on each tags array, drop once @quartz-community/search (1.0.3 still affected) handles array fields
+        for (const entry of Object.values(full)) {
+          if (Array.isArray(entry.tags)) Object.defineProperty(entry.tags, "toLowerCase", { value() { return this.join(" ").toLowerCase() } })
+        }
         index.content = { ...index.content, ...full }
         document.dispatchEvent(new CustomEvent("content-index-updated", { detail: { slugs: Object.keys(full) } }))
         // re-run anything typed while the full index was downloading
