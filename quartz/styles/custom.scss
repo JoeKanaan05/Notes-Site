@@ -1,5 +1,42 @@
+@use "sass:list";
 @use "./base.scss";
 @use "./variables.scss" as *;
+
+// A floating panel with stepped ("pixel-rounded") corners, an ink outline and
+// a hard diagonal drop shadow, all painted as background layers. No clip-path,
+// filter or transform: on the sidebar those would trap the fixed search
+// overlay inside it. The shape fills the box minus --pp-d (the shadow offset)
+// on the right and bottom. Fill colour is --pp-fill, so hover can change it.
+// Corner profile in pixels (x inset, y inset) from the outer edge.
+$pixel-corner: (4 0, 2 1, 1 2, 0 4);
+
+@mixin pixel-panel($fill) {
+  --pp-fill: #{$fill};
+  --pp-u: var(--px);
+  --pp-d: calc(var(--px) * 2);
+  $layers: ();
+  // Painted top to bottom: fill (one pixel in from the outline), outline, shadow.
+  @each $color, $grow, $shift in (var(--pp-fill) 1 0, var(--ui-line) 0 0, var(--ui-drop) 0 1) {
+    @each $corner in $pixel-corner {
+      $x: list.nth($corner, 1) + $grow;
+      $y: list.nth($corner, 2) + $grow;
+      $layers: list.append(
+        $layers,
+        linear-gradient($color, $color)
+          calc(var(--pp-u) * #{$x} + var(--pp-d) * #{$shift})
+          calc(var(--pp-u) * #{$y} + var(--pp-d) * #{$shift}) /
+          calc(100% - var(--pp-d) - var(--pp-u) * #{2 * $x})
+          calc(100% - var(--pp-d) - var(--pp-u) * #{2 * $y})
+          no-repeat,
+        $separator: comma
+      );
+    }
+  }
+  background: $layers;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
 
 // Sets backdrop-filter. Both spellings are needed (Safari < 18 only reads the
 // prefixed one), and the CSS minifier collapses the pair into one if they are
@@ -73,20 +110,23 @@ html:root {
   --ui-invert-text: var(--parchment-hi);
   --ui-scrim: rgba(42, 31, 51, 0.55);
   --ui-selection: rgba(255, 138, 42, 0.3);
+  --ui-dot: rgba(42, 31, 51, 0.09); // the page's pixel dot grid
+  --ui-pop: var(--accent); // hover fill for buttons and tabs
+  --ui-pop-text: var(--parchment-hi);
   color-scheme: light;
 
   // The notched pixel border: four separate ink shadows (corners stay empty),
-  // a highlight on top, shade underneath and a hard drop shadow.
+  // a highlight on top, shade underneath and a hard diagonal drop shadow.
   --ui-plate:
     inset 0 var(--px) 0 0 var(--ui-plate-hi), inset 0 calc(var(--px) * -1) 0 0 var(--ui-plate-lo),
     calc(var(--px) * -1) 0 0 0 var(--ui-line), var(--px) 0 0 0 var(--ui-line),
     0 calc(var(--px) * -1) 0 0 var(--ui-line), 0 var(--px) 0 0 var(--ui-line),
-    0 calc(var(--px) * 2.5) 0 0 var(--ui-drop);
+    calc(var(--px) * 2) calc(var(--px) * 2.5) 0 0 var(--ui-drop);
   // Same outline without the light; for hovered plates and framed images.
   --ui-frame:
     calc(var(--px) * -1) 0 0 0 var(--ui-line), var(--px) 0 0 0 var(--ui-line),
     0 calc(var(--px) * -1) 0 0 var(--ui-line), 0 var(--px) 0 0 var(--ui-line),
-    0 calc(var(--px) * 2.5) 0 0 var(--ui-drop);
+    calc(var(--px) * 2) calc(var(--px) * 2.5) 0 0 var(--ui-drop);
 }
 
 // Dark: night parchment. Panels sit lighter than the page and keep a dark
@@ -114,6 +154,9 @@ html:root[saved-theme="dark"] {
   --ui-invert-text: var(--ink);
   --ui-scrim: rgba(8, 5, 10, 0.65);
   --ui-selection: rgba(255, 138, 42, 0.35);
+  --ui-dot: rgba(255, 250, 240, 0.06);
+  --ui-pop: #7fa8d4;
+  --ui-pop-text: var(--ink);
   color-scheme: dark;
 }
 
@@ -122,42 +165,26 @@ html:root[saved-theme="dark"] {
 // Over-scroll ("rubber-band"): browsers fill the area past the page with the
 // root element's background *colour* only, so the page colour must sit on
 // <html> as a plain colour.
+// The sidebar column is a quarter of the screen (floored on small tablets so
+// the toolbar still fits); the floating menu panel sits inside it, --sb-gap
+// from the screen edges (section 4).
 html {
-  --sb-left: max(0px, calc((100vw - 1500px) / 2));
-  --sb-width: 290px;
+  --sb-col: 25vw;
+  --sb-gap: var(--s4);
   background-color: var(--ui-page);
+  // A faint 2px pixel dot every 20px.
+  background-image: conic-gradient(at 2px 2px, transparent 75%, var(--ui-dot) 0);
+  background-size: 20px 20px;
   // Belt and braces against sideways scrolling on phones. `clip` (unlike
   // `hidden`) doesn't create a scroll container, so sticky still works.
   overflow-x: clip;
 
   @media all and ($tablet) {
-    --sb-width: #{$sidePanelWidth};
+    --sb-col: max(25vw, 240px);
   }
 }
 
-// …and the sidebar column has to reach into that area too. A fixed strip
-// behind the sidebar, a full screen taller than the window at both ends,
-// covers it whether the browser moves fixed elements during the bounce
-// (Chrome) or not (Safari), and fixed boxes don't add scroll length.
-// Geometry mirrors the layout: .page is centred at max 1500px (base.scss);
-// the sidebar column is 290px on desktop (section 3), 320px on tablets.
-// body's own background must stay transparent or it would paint over this.
-@media all and (min-width: 801px) {
-  body::before {
-    content: "";
-    position: fixed;
-    top: -100vh;
-    height: 300vh;
-    left: var(--sb-left);
-    width: var(--sb-width);
-    box-sizing: border-box;
-    border-right: var(--px) solid var(--ui-line);
-    background: var(--ui-sidebar);
-    z-index: -1;
-    pointer-events: none;
-  }
-}
-
+// body's own background must stay transparent so the dot grid shows.
 body {
   background-color: transparent;
   color: var(--ui-text);
@@ -189,10 +216,6 @@ article {
   p,
   li {
     line-height: 1.65;
-  }
-
-  :is(p, ul, ol, dl, blockquote) {
-    max-width: 66ch;
   }
 
   strong {
@@ -233,6 +256,17 @@ h1.article-title {
   overflow-wrap: break-word;
 }
 
+// A three-colour pixel stripe under the page title.
+h1.article-title::after {
+  content: "";
+  display: block;
+  width: 72px;
+  height: 6px;
+  margin-top: 0.7rem;
+  background: linear-gradient(90deg, var(--signal) 0 33.3%, var(--gold) 0 66.6%, var(--accent) 0);
+  box-shadow: 0 0 0 2px var(--ui-line);
+}
+
 article h2,
 h2 {
   font-size: 1.875rem;
@@ -240,6 +274,18 @@ h2 {
   line-height: 1.1;
   color: var(--ui-accent-deep);
   margin-top: 2.5rem;
+}
+
+// A pixel marker in front of note section headings.
+.markdown-rendered > h2::before {
+  content: "";
+  display: inline-block;
+  width: 0.4em;
+  height: 0.4em;
+  margin-right: 0.45em;
+  vertical-align: 0.15em;
+  background: var(--signal);
+  box-shadow: 0 0 0 2px var(--ui-line);
 }
 
 h3 {
@@ -291,7 +337,7 @@ a {
     &:hover {
       color: var(--ui-heading);
       text-decoration-color: var(--signal);
-      background-color: transparent;
+      background-color: var(--ui-selection);
     }
 
     &.broken {
@@ -319,39 +365,46 @@ a {
   display: none !important;
 }
 
-// Give the right sidebar's empty column to the note. Needs `.page >` to
-// outrank base.scss's `.page > #quartz-body` grid, or it silently loses.
-// The 290px must match --sb-width in section 1 (over-scroll strip).
-@media all and (min-width: 1200px) {
+// The page spans the whole screen (base.scss centres it at 1500px), so the
+// menu sits on the screen's left edge on any monitor.
+.page {
+  max-width: none;
+}
+
+// Desktop: 1/4 menu, 1/2 note, 1/4 empty. Tablet: 1/4 menu, the note takes
+// the rest. Needs `.page >` to outrank base.scss's `.page > #quartz-body`
+// grid, or it silently loses.
+@media all and ($desktop) {
   .page > #quartz-body {
-    grid-template-columns: 290px minmax(0, 1fr);
-    grid-template-areas:
-      "grid-sidebar-left grid-header"
-      "grid-sidebar-left grid-center"
-      "grid-sidebar-left grid-footer";
+    grid-template-columns: var(--sb-col) minmax(0, 1fr) var(--sb-col);
   }
 }
 
-// Tablet: the base layout pads the whole grid, which left a strip of page
-// colour beside the sidebar. The content column keeps its own padding.
 @media all and ($tablet) {
   .page > #quartz-body {
+    grid-template-columns: var(--sb-col) minmax(0, 1fr);
     padding-left: 0;
   }
 }
 
-// The content column: 800px of content plus padding, centred, the same for
-// header, body and footer. Paragraphs are capped at 66ch (section 1); tables,
-// code and diagrams may use the full width. base.scss gives these
-// `min-width: 100%`, which beat max-width and let the body run full-width;
-// `.page > #quartz-body` is needed to outrank it.
-.page > #quartz-body :is(.center, .page-header, footer) {
+// The sidebar is fixed (section 4), so it no longer fills column 1, and the
+// note column (.center: header, body and footer; no grid-area of its own)
+// would auto-place into it.
+@media all and (min-width: 801px) {
+  .page > #quartz-body > .center {
+    grid-column: 2;
+  }
+}
+
+// The note column fills its grid column, with side padding. base.scss gives
+// it `min-width: 100%`; `.page > #quartz-body` outranks that.
+.page > #quartz-body > .center {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  max-width: calc(800px + 2 * var(--s7));
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   padding-left: var(--s7);
   padding-right: var(--s7);
 }
@@ -382,16 +435,28 @@ a {
   gap: 1.25rem;
 }
 
-// Desktop and tablet: the sidebar itself is transparent. Its colour and
-// border come from the fixed body::before strip (section 1), which also
-// fills the over-scroll area, so there's no seam when the page bounces.
+// Desktop and tablet: a floating pixel panel fixed to the screen's left edge,
+// filling its 1/4 column (minus --sb-gap all round). The extra right and
+// bottom padding is room for the panel's drop shadow (--pp-d).
+// The higher z-index and `overflow: visible` while search is open let the
+// fixed search overlay (a child of this sidebar) cover the note: WebKit on
+// iPad clipped it to the sidebar's scroll box, so it showed under the text.
 @media all and (min-width: 801px) {
   .page > #quartz-body .sidebar.left {
-    background: transparent;
-    border-right: none;
-    box-shadow: none;
-    padding-left: 1.25rem;
-    padding-right: 1.5rem;
+    @include pixel-panel(var(--ui-sidebar));
+    position: fixed;
+    top: var(--sb-gap);
+    bottom: var(--sb-gap);
+    left: var(--sb-gap);
+    width: calc(var(--sb-col) - 2 * var(--sb-gap));
+    height: auto;
+    z-index: 20;
+    padding: 1.75rem calc(1.25rem + var(--pp-d)) calc(1.25rem + var(--pp-d)) 1.25rem;
+
+    &:has(.search-container.active) {
+      overflow: visible;
+      z-index: 1000;
+    }
   }
 }
 
@@ -409,10 +474,12 @@ a {
   &::before {
     content: "";
     flex: none;
-    width: 10px;
-    height: 10px;
-    background: var(--accent);
-    box-shadow: 0 0 0 2px var(--ui-line);
+    width: 12px;
+    height: 12px;
+    background: var(--signal);
+    box-shadow:
+      0 0 0 2px var(--ui-line),
+      4px 4px 0 2px var(--accent);
   }
 
   a {
@@ -446,8 +513,11 @@ a {
 }
 
 // ═════════════ 5. Toolbar: search + theme buttons (plates) ═════════════
+// The plugin caps search at 14rem; let it fill the toolbar so the theme
+// button lines up with the panel's right edge.
 .search {
   margin: 0;
+  max-width: none;
 }
 
 %ui-button {
@@ -457,7 +527,7 @@ a {
   box-shadow: var(--ui-plate);
 
   &:hover {
-    background: var(--ui-invert-bg);
+    background: var(--ui-pop);
     box-shadow: var(--ui-frame);
   }
 
@@ -484,17 +554,20 @@ a {
 
   &:hover {
     & > p {
-      color: var(--ui-invert-text);
+      color: var(--ui-pop-text);
     }
 
     svg {
-      stroke: var(--ui-invert-text);
+      stroke: var(--ui-pop-text);
     }
   }
 }
 
+// `display: block`: as an inline button it sat on the text baseline of its
+// vertically centred wrapper, a few pixels higher than the search button.
 .darkmode {
   @extend %ui-button;
+  display: block;
   width: 2.25rem;
   height: 2.25rem;
 
@@ -508,8 +581,8 @@ a {
   }
 
   &:hover svg {
-    fill: var(--ui-invert-text);
-    stroke: var(--ui-invert-text);
+    fill: var(--ui-pop-text);
+    stroke: var(--ui-pop-text);
   }
 }
 
@@ -706,11 +779,12 @@ html body .search > .search-container {
       color: var(--ui-heading);
     }
 
-    // Current page: inverted, like a pressed plate.
+    // Current page: inverted, like a pressed plate, with a signal-orange edge.
     &.active {
       background: var(--ui-invert-bg);
       color: var(--ui-invert-text);
       font-weight: 600;
+      box-shadow: inset var(--px) 0 0 var(--signal);
     }
   }
 }
@@ -846,32 +920,37 @@ html body .search > .search-container {
     transform: none;
   }
 
+  // A floating pixel panel just under the bar (the bar is its containing
+  // block, so `top` is measured from the screen top). It slides in smoothly:
+  // the old stepped 100vw slide moved in five visible jumps and felt laggy.
   .page > #quartz-body .explorer .explorer-content {
+    @include pixel-panel(var(--ui-sidebar));
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    max-width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
+    top: calc(var(--mobile-bar-h) + 0.5rem);
+    left: 0.75rem;
+    width: calc(100vw - 1.5rem);
+    max-width: none;
+    height: calc(100dvh - var(--mobile-bar-h) - 0.5rem - max(0.75rem, env(safe-area-inset-bottom)));
+    max-height: none;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: calc(4.25rem + env(safe-area-inset-top)) 0 0;
-    background: var(--ui-sidebar);
+    padding: 0.75rem var(--pp-d) var(--pp-d) 0;
     @include backdrop(none);
+    will-change: transform;
     transition:
-      transform var(--dur) var(--steps),
-      visibility var(--dur) var(--steps);
+      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 160ms ease-out,
+      visibility 220ms;
 
-    // The list scrolls inside the sheet; the page underneath stays put.
+    // The list scrolls inside the panel; the page underneath stays put.
     & > .explorer-ul {
       flex: 1 1 auto;
       min-height: 0;
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
-      padding: 0.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
+      padding: 0.25rem 1rem 1.25rem;
     }
 
     // Bigger tap targets (~44px).
@@ -896,6 +975,15 @@ html body .search > .search-container {
       margin-left: 0.85rem;
       padding-left: 0.6rem;
     }
+  }
+
+  .page > #quartz-body .explorer.collapsed > .explorer-content {
+    transform: translateX(calc(-100% - 1.5rem));
+    opacity: 0;
+  }
+
+  .page > #quartz-body .explorer:not(.collapsed) > .explorer-content {
+    opacity: 1;
   }
 }
 
@@ -933,6 +1021,11 @@ a.tag-link {
 }
 
 // ═════════════ 10. Panels: tables, code, mermaid, callouts ═════════════
+// Inside notes every outline (rules, tables, code, images, quotes…) is beige.
+article {
+  --ui-line: var(--parchment-lo);
+}
+
 %ui-panel {
   border: none;
   border-radius: 0;
@@ -1596,5 +1689,272 @@ html:has(.search-container.active) {
 
   :active {
     transform: none !important;
+  }
+}
+
+// ═════════════ 15. Home page archive ═════════════
+// Built by uiBehaviour.ts on the home page only: a dark card (the file pulled
+// out) on top of a stack of file rows, one per note, under folder dividers
+// (<details>, closed by default). Each row's tab sits on its top edge, over
+// the row above. uiBehaviour.ts sets --d (0 at the bottom, up to 10) so the
+// stack flares out towards the base, and data-pos (0/1/2) for the tab spot.
+.archive {
+  --row-h: 2.6rem;
+  --tab-h: 1.5rem;
+  --flare: 6px;
+  --edge: 2px;
+  margin: 1rem 0 3.5rem;
+  font-family: var(--codeFont);
+}
+
+.archive-card {
+  @include pixel-panel(var(--ui-invert-bg));
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  // Fixed, not min-height: a card that grows with the description pushes the
+  // rows down under the pointer and hovers a different file.
+  height: 15rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0 calc(13 * var(--flare)) -3.75rem;
+  padding: 0.9rem calc(1.25rem + var(--pp-d)) calc(0.9rem + var(--pp-d)) 1.25rem;
+  color: var(--ui-invert-text);
+
+  &.pulled {
+    animation: archive-pull 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+}
+
+@keyframes archive-pull {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.archive-card-rec,
+.archive-card-foot {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.archive-card-rec {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid currentColor;
+}
+
+.archive-card-title {
+  font-family: var(--headerFont);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: inherit;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  flex: none;
+}
+
+.archive-card-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: inherit;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.archive-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+  opacity: 1;
+
+  & > span:first-child {
+    opacity: 0.65;
+    overflow-wrap: anywhere;
+  }
+}
+
+.archive-cursor {
+  flex: none;
+  width: 9px;
+  height: 15px;
+  background: currentColor;
+  animation: archive-blink 1s steps(1) infinite;
+}
+
+@keyframes archive-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+// The file behind the card, so the card looks pulled out of the stack.
+.archive-stack::before {
+  content: "";
+  display: block;
+  height: 5rem;
+  margin: 0 calc(11 * var(--flare));
+  border: var(--edge) solid var(--ui-line);
+  border-bottom: 0;
+  background: var(--ui-card);
+}
+
+.archive-row {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  height: var(--row-h);
+  margin: 0 calc(var(--d, 10) * var(--flare));
+  border: var(--edge) solid var(--ui-line);
+  border-bottom: 0;
+  background: var(--ui-card);
+  color: var(--ui-heading);
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    color: var(--ui-heading);
+  }
+}
+
+.archive-file:is(:hover, :focus-visible) {
+  background: var(--ui-surface-2);
+
+  .archive-tab-inner {
+    background: var(--ui-pop);
+    color: var(--ui-pop-text);
+  }
+}
+
+// The tab: a stepped trapezoid (clip-path on the inner span) outlined by
+// three hard drop-shadows on the outer one (none at the bottom, so the tab
+// merges into its row and covers the row's top edge).
+.archive-tab {
+  position: absolute;
+  top: calc(-1 * var(--tab-h));
+  left: 6%;
+  max-width: 70%;
+  height: var(--tab-h);
+  filter: drop-shadow(var(--edge) 0 0 var(--ui-line))
+    drop-shadow(calc(-1 * var(--edge)) 0 0 var(--ui-line))
+    drop-shadow(0 calc(-1 * var(--edge)) 0 var(--ui-line));
+
+  [data-pos="1"] > & {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  [data-pos="2"] > & {
+    left: auto;
+    right: 6%;
+  }
+}
+
+.archive-tab-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 1.7rem;
+  background: var(--ui-card);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  clip-path: polygon(
+    0 100%,
+    0 66%,
+    6px 66%,
+    6px 33%,
+    12px 33%,
+    12px 0,
+    calc(100% - 12px) 0,
+    calc(100% - 12px) 33%,
+    calc(100% - 6px) 33%,
+    calc(100% - 6px) 66%,
+    100% 66%,
+    100% 100%
+  );
+
+  & > :first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Folder dividers: inverted tabs with the file count; signal orange when open.
+.archive-row-folder {
+  .archive-tab-inner {
+    background: var(--ui-invert-bg);
+    color: var(--ui-invert-text);
+    font-weight: 600;
+  }
+
+  .archive-tab-inner::after {
+    content: "+";
+    margin-left: -0.35rem;
+  }
+
+  &:hover .archive-tab-inner {
+    background: var(--ui-pop);
+    color: var(--ui-pop-text);
+  }
+}
+
+.archive-folder[open] > .archive-row-folder .archive-tab-inner {
+  background: var(--signal);
+  color: var(--ink);
+
+  &::after {
+    content: "-";
+  }
+}
+
+.archive-base {
+  @include pixel-panel(var(--ui-card));
+  // The panel's shape stops --pp-d short of the right edge (room for its
+  // shadow); pull it out so the outline lines up with the rows above.
+  margin-right: calc(-1 * var(--pp-d));
+  display: grid;
+  place-items: center;
+  height: 7.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+@media all and ($mobile) {
+  .archive {
+    --flare: 2px;
+  }
+
+  .archive-card {
+    height: 14rem;
+  }
+
+  .archive-tab {
+    max-width: 82%;
   }
 }
